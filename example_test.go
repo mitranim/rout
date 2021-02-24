@@ -37,7 +37,8 @@ func routes(r rout.R) {
 	r.Get(``, serveFiles)
 }
 
-// This is not a "builder" function; it's executed for EVERY request.
+// This is not a "builder" function; it's executed for EVERY request that gets
+// routed to it.
 func routesApi(r rout.R) {
 	// Different error handling just for this route.
 	defer r.Rec(writeErrJson)
@@ -49,7 +50,8 @@ func routesApi(r rout.R) {
 	r.Sub(`^/api/articles(?:/|$)`, routesApiArticles)
 }
 
-// This is not a "builder" function; it's executed for EVERY request.
+// This is not a "builder" function; it's executed for EVERY request that gets
+// routed to it.
 func routesApiArticles(r rout.R) {
 	r.Methods(`^/api/articles$`, func(r rout.MR) {
 		r.Get(apiArticleFeed)

@@ -2,7 +2,8 @@
 Experimental router for Go HTTP servers. Imperative control flow with
 declarative syntax. Doesn't need middleware.
 
-Very simple, small (≈300 LoC without docs), dependency-free, reasonably fast.
+Very simple, small (≈300 LoC without docs), dependency-free, with reasonable
+performance.
 
 See `Route` for an example. See `readme.md` for additional info such as
 motivation and advantages.
