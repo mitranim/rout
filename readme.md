@@ -167,6 +167,16 @@ func routes(r rout.R) {
 }
 ```
 
+## Changelog
+
+### v0.1.1
+
+Method matching is now case-insensitive.
+
+### v0.1.0
+
+First tagged release.
+
 ## License
 
 https://unlicense.org

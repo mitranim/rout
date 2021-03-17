@@ -2,7 +2,7 @@
 Experimental router for Go HTTP servers. Imperative control flow with
 declarative syntax. Doesn't need middleware.
 
-Very simple, small (≈300 LoC without docs), dependency-free, with reasonable
+Very simple, small (≈400 LoC without docs), dependency-free, with reasonable
 performance.
 
 See `Route` for an example. See `readme.md` for additional info such as
@@ -173,7 +173,7 @@ func (self Router) matchPattern(pattern string) bool {
 
 func (self Router) matchMethod(method string) bool {
 	req := self.Req
-	return req != nil && req.Method == method
+	return req != nil && strings.EqualFold(req.Method, method)
 }
 
 /*
