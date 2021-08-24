@@ -34,75 +34,73 @@ func makeReq() *Req {
 }
 
 func serve(rew Rew, req *Req) {
-	try(rout.Route(rew, req, bRoutes))
+	try(rout.Route(rew, req, benchRoutes))
 }
 
-func bRoutes(r rout.R) {
-	r.Sub(`^/api(?:/|$)`, bRoutesApi)
+func benchRoutes(r rout.R) {
+	r.Reg(`^/api(?:/|$)`).Sub(benchRoutesApi)
 }
 
-func bRoutesApi(r rout.R) {
-	r.Sub(`^/api/9bbb5(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/3b002(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/ac134(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/e7c64(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/424da(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/4cddb(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/fabe0(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/210c4(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/c4abd(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/82863(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/9ef98(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/f565f(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/f82b7(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/d7403(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/21838(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/1acff(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/a0771(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/c2bce(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/24bef(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/091ee(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/782d4(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/eeabb(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/5ffc7(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/0f265(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/2c970(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/ac36c(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/8b8d8(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/3faf4(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/65ddd(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/34f35(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/f74f2(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/8031d(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/9bfb8(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/cf538(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/becce(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/183f4(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/3cafa(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/05453(?:/|$)`, unreachableRoute)
-	r.Sub(`^/api/match(?:/|$)`, apiTwenty)
+func benchRoutesApi(r rout.R) {
+	r.Reg(`^/api/9bbb5(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/3b002(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/ac134(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/e7c64(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/424da(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/4cddb(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/fabe0(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/210c4(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/c4abd(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/82863(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/9ef98(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/f565f(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/f82b7(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/d7403(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/21838(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/1acff(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/a0771(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/c2bce(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/24bef(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/091ee(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/782d4(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/eeabb(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/5ffc7(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/0f265(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/2c970(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/ac36c(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/8b8d8(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/3faf4(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/65ddd(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/34f35(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/f74f2(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/8031d(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/9bfb8(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/cf538(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/becce(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/183f4(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/3cafa(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/05453(?:/|$)`).Sub(unreachableRoute)
+	r.Reg(`^/api/match(?:/|$)`).Sub(apiTwenty)
 	panic("unreachable")
 }
 
 func apiTwenty(r rout.R) {
-	r.Methods(`^/api/match$`, unreachableMethods)
-	r.Param().Methods(`^/api/match/([^/]+)$`, apiTwentyParam)
+	r.Reg(`^/api/match$`).Methods(unreachableRoute)
+
+	r.Reg(`^/api/match/([^/]+)$`).Methods(func(r rout.R) {
+		r.Get().Res(unreachableRes)
+		r.Put().Res(unreachableRes)
+		r.Post().Func(apiTwentyParamPost)
+		r.Delete().Res(unreachableRes)
+	})
 }
 
-func apiTwentyParam(r rout.PMR) {
-	r.Get(unreachableParamFunc)
-	r.Put(unreachableParamFunc)
-	r.Post(apiTwentyParamPost)
-	r.Delete(unreachableParamFunc)
-}
-
-func apiTwentyParamPost(rew Rew, req *Req, _ []string) {
+func apiTwentyParamPost(rew Rew, _ *Req) {
 	rew.WriteHeader(201)
 }
 
-func unreachableRoute(rout.R)                  { panic("unreachable") }
-func unreachableMethods(rout.MR)               { panic("unreachable") }
-func unreachableParamFunc(Rew, *Req, []string) { panic("unreachable") }
+func unreachableRoute(rout.R) { panic("unreachable") }
+func unreachableRes(*Req) Res { panic("unreachable") }
 
 func eq(exp, act interface{}) {
 	if !reflect.DeepEqual(exp, act) {

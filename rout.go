@@ -2,39 +2,35 @@
 Experimental router for Go HTTP servers. Imperative control flow with
 declarative syntax. Doesn't need middleware.
 
-Very simple, small (≈400 LoC without docs), dependency-free, with reasonable
-performance.
+Very simple, small (≈300 LoC without docs), dependency-free, reasonably fast.
 
 See `Route` for an example. See `readme.md` for additional info such as
 motivation and advantages.
 */
 package rout
 
-import (
-	"errors"
-	"fmt"
-	"io"
-	"net/http"
-	"regexp"
-	"strings"
-	"sync"
-)
-
-// For brevity.
-type (
-	R   = Router
-	MR  = MethodRouter
-	PR  = ParamRouter
-	PMR = ParamMethodRouter
-)
+import "net/http"
 
 type (
-	// Non-parametrized handler func. Same as `http.HandlerFunc`.
+	// Shortcut for brevity.
+	R = Router
+
+	// Non-parametrized handler func. Same as `http.HandlerFunc`. The type of
+	// functions passed to `Router.Func`.
 	Func = func(http.ResponseWriter, *http.Request)
 
-	// Parametrized handler func. Takes additional args, produced by parenthesized
-	// regexp capture groups. Args start at index 0, not 1 like in a regexp match.
+	// Parametrized handler func. The type of functions passed to
+	// `Router.ParamFunc`. Takes additional args, produced by parenthesized
+	// regexp capture groups. Args start at index 0, not 1 like in a regexp
+	// match.
 	ParamFunc = func(http.ResponseWriter, *http.Request, []string)
+
+	// Short for "responder". The type of functions passed to `Router.Res`.
+	Res = func(*http.Request) http.Handler
+
+	// Short for "parametrized responder". The type of functions passed to
+	// `Router.ParamRes`.
+	ParamRes = func(*http.Request, []string) http.Handler
 )
 
 /*
@@ -45,110 +41,131 @@ appropriate response. If routing was performed successfully, the error is nil.
 */
 func Route(rew http.ResponseWriter, req *http.Request, fun func(Router)) (err error) {
 	defer rec(&err)
-	fun(Router{Rew: rew, Req: req})
-	return errNotFound(req.URL.Path, req.Method)
+	Router{Rew: rew, Req: req}.Sub(fun)
+	return
 }
 
 /*
-Main router type. Should be used via `Route`, which takes care of panics
-inherent to the routing flow.
+Main router type. Should be used via `Route`, which handles panics inherent to
+the routing flow.
 */
 type Router struct {
 	Rew http.ResponseWriter
 	Req *http.Request
-}
 
-// Cost-free conversion to a parametrized router.
-func (self Router) Param() ParamRouter { return ParamRouter(self) }
-
-// Same as `.Method(http.MethodGet, pat, fun)`.
-func (self Router) Get(pat string, fun Func) { self.Method(http.MethodGet, pat, fun) }
-
-// Same as `.Method(http.MethodHead, pat, fun)`.
-func (self Router) Head(pat string, fun Func) { self.Method(http.MethodHead, pat, fun) }
-
-// Same as `.Method(http.MethodOptions, pat, fun)`.
-func (self Router) Options(pat string, fun Func) { self.Method(http.MethodOptions, pat, fun) }
-
-// Same as `.Method(http.MethodPost, pat, fun)`.
-func (self Router) Post(pat string, fun Func) { self.Method(http.MethodPost, pat, fun) }
-
-// Same as `.Method(http.MethodPatch, pat, fun)`.
-func (self Router) Patch(pat string, fun Func) { self.Method(http.MethodPatch, pat, fun) }
-
-// Same as `.Method(http.MethodPut, pat, fun)`.
-func (self Router) Put(pat string, fun Func) { self.Method(http.MethodPut, pat, fun) }
-
-// Same as `.Method(http.MethodDelete, pat, fun)`.
-func (self Router) Delete(pat string, fun Func) { self.Method(http.MethodDelete, pat, fun) }
-
-/*
-Matches on both the URL pattern and the HTTP method. If the pattern matches but
-the method doesn't, panics with an instance of `Error` where
-`.HttpStatus == http.StatusMethodNotAllowed`.
-
-Note: `.Method` can NOT be repeated for one pattern, because the first mismatch
-generates an error. To allow multiple HTTP methods for one pattern, use
-`.Methods`.
-*/
-func (self Router) Method(method string, pattern string, fun Func) {
-	if self.matchPattern(pattern) {
-		if !self.matchMethod(method) {
-			panic(errMethodNotAllowed(self.Req.URL.Path, self.Req.Method))
-		}
-		if fun != nil {
-			fun(self.Rew, self.Req)
-		}
-		panic(nil)
-	}
+	pattern string
+	method  string
+	lax     bool
 }
 
 /*
-Matches only on the URL pattern. Allows any HTTP method.
+Returns a router with the provided regexp pattern. The pattern will be used to
+match `req.URL.Path`.
 */
-func (self Router) Any(pattern string, fun Func) {
-	if self.matchPattern(pattern) {
-		if fun != nil {
-			fun(self.Rew, self.Req)
-		}
-		panic(nil)
-	}
+func (self Router) Reg(val string) Router {
+	self.pattern = val
+	return self.Lax(false)
 }
 
 /*
-Matches on the URL pattern and performs sub-routing. If the sub-route doesn't
-find a match, panics with an instance of `Error` where
-`.HttpStatus == http.StatusNotFound`.
+Returns a router that matches only the provided method. If the method is empty,
+the resulting router matches all methods, which is the default.
+
+Note: to match multiple methods for one route, use `Router.Methods`. Otherwise,
+the first mismatch generates `Err{Status: http.StatusMethodNotAllowed`}.
 */
-func (self Router) Sub(pattern string, fun func(Router)) {
-	if self.matchPattern(pattern) {
-		if fun != nil {
-			fun(self)
-		}
-		panic(errNotFound(self.Req.URL.Path, self.Req.Method))
-	}
+func (self Router) Method(val string) Router {
+	self.method = val
+	return self
 }
 
 /*
-Matches on the URL pattern and performs sub-routing ONLY for HTTP methods on
-this path. If the sub-route doesn't find a match, panics with an instance of
-`Error` where `.HttpStatus == http.StatusMethodNotAllowed`.
+Returns a router set to lax/permissive mode.
+
+In strict mode (default), whenever the router matches the URL pattern but
+doesn't match the HTTP method, it immediately generates a "method not allowed"
+error. `Router.Reg` automatically switches the router into strict mode.
+
+In lax mode (opt-in), if either URL pattern or HTTP status doesn't match, the
+router simply proceeds to other routes, without generating an error.
+`Router.Methods` automatically switches the router into lax mode.
 */
-func (self Router) Methods(pattern string, fun func(MethodRouter)) {
-	if self.matchPattern(pattern) {
-		if fun != nil {
-			fun(MethodRouter(self))
-		}
-		panic(errMethodNotAllowed(self.Req.URL.Path, self.Req.Method))
+func (self Router) Lax(val bool) Router {
+	self.lax = val
+	return self
+}
+
+// Same as `.Method(http.MethodGet)`.
+// Returns a router that matches only this HTTP method.
+func (self Router) Get() Router { return self.Method(http.MethodGet) }
+
+// Same as `.Method(http.MethodHead)`.
+// Returns a router that matches only this HTTP method.
+func (self Router) Head() Router { return self.Method(http.MethodHead) }
+
+// Same as `.Method(http.MethodOptions)`.
+// Returns a router that matches only this HTTP method.
+func (self Router) Options() Router { return self.Method(http.MethodOptions) }
+
+// Same as `.Method(http.MethodPost)`.
+// Returns a router that matches only this HTTP method.
+func (self Router) Post() Router { return self.Method(http.MethodPost) }
+
+// Same as `.Method(http.MethodPatch)`.
+// Returns a router that matches only this HTTP method.
+func (self Router) Patch() Router { return self.Method(http.MethodPatch) }
+
+// Same as `.Method(http.MethodPut)`.
+// Returns a router that matches only this HTTP method.
+func (self Router) Put() Router { return self.Method(http.MethodPut) }
+
+// Same as `.Method(http.MethodDelete)`.
+// Returns a router that matches only this HTTP method.
+func (self Router) Delete() Router { return self.Method(http.MethodDelete) }
+
+/*
+If the router matches the request, perform sub-routing. If sub-routing doesn't
+find a match, panic with `Err{Status: http.StatusNotFound}`.
+
+If the router doesn't match the request, do nothing.
+*/
+func (self Router) Sub(fun func(Router)) {
+	if !self.test() {
+		return
 	}
+	if fun != nil {
+		fun(self)
+	}
+	panic(errNotFound(self.req()))
+}
+
+/*
+If the router matches the request, perform sub-routing. The router provided to
+the function is automatically "lax": a mismatch in the HTTP method doesn't
+immediately generate an error. However, if sub-routing doesn't find a match,
+this panics with `Err{Status: http.StatusMethodNotAllowed}`.
+
+If the router doesn't match the request, do nothing.
+*/
+func (self Router) Methods(fun func(Router)) {
+	self.method = ``
+	if !self.test() {
+		return
+	}
+
+	if fun != nil {
+		fun(self.Lax(true))
+	}
+
+	panic(errMethodNotAllowed(self.req()))
 }
 
 /*
 Short for "recover". Recovers from a panic, and calls the provided function with
 the resulting error or nil.
 
-ALWAYS re-panics with nil to preserve the `rout` control flow. Must be used ONLY
-inside routing functions:
+ALWAYS re-panics with nil to preserve the control flow. Must be used ONLY inside
+routing functions:
 
 	func routes(r rout.R) {
 		defer r.Rec(writeErr)
@@ -157,7 +174,7 @@ inside routing functions:
 
 	func writeErr(rew http.ResponseWriter, req *http.Request, err error) {}
 
-Reminiscent of middleware, which `rout` prides itself on not having. This
+Reminiscent for middleware, which `rout` prides itself on not having. This
 approach should be revised.
 */
 func (self Router) Rec(fun func(http.ResponseWriter, *http.Request, error)) {
@@ -166,327 +183,156 @@ func (self Router) Rec(fun func(http.ResponseWriter, *http.Request, error)) {
 	panic(nil)
 }
 
-func (self Router) matchPattern(pattern string) bool {
-	req := self.Req
-	return req != nil && cachedRegexp(pattern).MatchString(req.URL.Path)
-}
-
-func (self Router) matchMethod(method string) bool {
-	req := self.Req
-	return req != nil && strings.EqualFold(req.Method, method)
+/*
+If the router matches the request, use the provided handler to respond.
+If the router doesn't match the request, do nothing. The handler may be nil.
+*/
+func (self Router) Handler(val http.Handler) {
+	if !self.test() {
+		return
+	}
+	if val != nil {
+		val.ServeHTTP(self.Rew, self.Req)
+	}
+	panic(nil)
 }
 
 /*
-Variant of `Router` where route handlers take captured args as `[]string`.
-Args are produced by parenthesized regexp capture groups.
+If the router matches the request, use the provided handler func to respond.
+If the router doesn't match the request, do nothing. The func may be nil.
 */
-type ParamRouter Router
-
-// Same as `.Method(http.MethodGet, pat, fun)`.
-func (self ParamRouter) Get(pat string, fun ParamFunc) { self.Method(http.MethodGet, pat, fun) }
-
-// Same as `.Method(http.MethodHead, pat, fun)`.
-func (self ParamRouter) Head(pat string, fun ParamFunc) { self.Method(http.MethodHead, pat, fun) }
-
-// Same as `.Method(http.MethodOptions, pat, fun)`.
-func (self ParamRouter) Options(pat string, fun ParamFunc) { self.Method(http.MethodOptions, pat, fun) }
-
-// Same as `.Method(http.MethodPost, pat, fun)`.
-func (self ParamRouter) Post(pat string, fun ParamFunc) { self.Method(http.MethodPost, pat, fun) }
-
-// Same as `.Method(http.MethodPatch, pat, fun)`.
-func (self ParamRouter) Patch(pat string, fun ParamFunc) { self.Method(http.MethodPatch, pat, fun) }
-
-// Same as `.Method(http.MethodPut, pat, fun)`.
-func (self ParamRouter) Put(pat string, fun ParamFunc) { self.Method(http.MethodPut, pat, fun) }
-
-// Same as `.Method(http.MethodDelete, pat, fun)`.
-func (self ParamRouter) Delete(pat string, fun ParamFunc) { self.Method(http.MethodDelete, pat, fun) }
-
-// Same as `Router.Method`, but the handler is parametrized and takes args
-// produced by parenthesized capture groups in the regexp.
-func (self ParamRouter) Method(method string, pattern string, fun ParamFunc) {
-	args := self.patternMatch(pattern)
-	if args != nil {
-		if !Router(self).matchMethod(method) {
-			panic(errMethodNotAllowed(self.Req.URL.Path, self.Req.Method))
-		}
-		if fun != nil {
-			fun(self.Rew, self.Req, args)
-		}
-		panic(nil)
+func (self Router) Func(val Func) {
+	if !self.test() {
+		return
 	}
+	if val != nil {
+		val(self.Rew, self.Req)
+	}
+	panic(nil)
 }
 
-// Same as `Router.Any`, but the handler is parametrized and takes args produced
-// by parenthesized capture groups in the regexp.
-func (self ParamRouter) Any(pattern string, fun ParamFunc) {
-	args := self.patternMatch(pattern)
-	if args != nil {
-		if fun != nil {
-			fun(self.Rew, self.Req, args)
-		}
-		panic(nil)
+/*
+If the router matches the request, use the provided handler func to respond. If
+the router doesn't match the request, do nothing. The func may be nil. The
+additional `[]string` argument contains regexp captures from the pattern passed
+to `Router.Reg`, if any.
+*/
+func (self Router) ParamFunc(val ParamFunc) {
+	match := self.match()
+	if match == nil {
+		return
 	}
+	if val != nil {
+		val(self.Rew, self.Req, match)
+	}
+	panic(nil)
 }
 
-// Same as `Router.Sub`, but parametrized.
-func (self ParamRouter) Sub(pattern string, fun func(ParamRouter)) {
-	if Router(self).matchPattern(pattern) {
-		if fun != nil {
-			fun(self)
-		}
-		panic(errNotFound(self.Req.URL.Path, self.Req.Method))
+/*
+If the router matches the request, use the provided handler func to respond. If
+the router doesn't match the request, do nothing. The func may be nil.
+*/
+func (self Router) Res(val Res) {
+	if !self.test() {
+		return
 	}
+	if val != nil {
+		val := val(self.Req)
+		if val != nil {
+			val.ServeHTTP(self.Rew, self.Req)
+		}
+	}
+	panic(nil)
 }
 
-// Same as `Router.Methods`, but the sub-router allows parametrized handlers
-// that take args produced by parenthesized capture groups in the regexp.
-func (self ParamRouter) Methods(pattern string, fun func(ParamMethodRouter)) {
-	args := self.patternMatch(pattern)
-	if args != nil {
-		if fun != nil {
-			fun(ParamMethodRouter{self, args})
-		}
-		panic(errMethodNotAllowed(self.Req.URL.Path, self.Req.Method))
+/*
+If the router matches the request, use the provided handler func to respond. If
+the router doesn't match the request, do nothing. The func may be nil. The
+additional `[]string` argument contains regexp captures from the pattern passed
+to `Router.Reg`, if any.
+*/
+func (self Router) ParamRes(val ParamRes) {
+	match := self.match()
+	if match == nil {
+		return
 	}
+	if val != nil {
+		val := val(self.Req, match)
+		if val != nil {
+			val.ServeHTTP(self.Rew, self.Req)
+		}
+	}
+	panic(nil)
 }
 
-func (self ParamRouter) patternMatch(pattern string) []string {
+func (self Router) testMethod() bool {
+	req, method := self.Req, self.method
+	return req != nil && (method == `` || method == req.Method)
+}
+
+func (self Router) testPattern() bool {
+	req, pattern := self.Req, self.pattern
+	return req != nil && reTest(req.URL.Path, pattern)
+}
+
+func (self Router) matchPattern() []string {
+	req, pattern := self.Req, self.pattern
+	if req == nil {
+		return nil
+	}
+	return reMatch(req.URL.Path, pattern)
+}
+
+func (self Router) test() bool {
+	if self.lax {
+		return self.testLax()
+	}
+	return self.testStrict()
+}
+
+func (self Router) testLax() bool {
+	return self.testMethod() && self.testPattern()
+}
+
+func (self Router) testStrict() bool {
+	if !self.testPattern() {
+		return false
+	}
+	if self.testMethod() {
+		return true
+	}
+	panic(errMethodNotAllowed(self.req()))
+}
+
+func (self Router) match() []string {
+	if self.lax {
+		return self.matchLax()
+	}
+	return self.matchStrict()
+}
+
+func (self Router) matchLax() []string {
+	if !self.testMethod() {
+		return nil
+	}
+	return self.matchPattern()
+}
+
+func (self Router) matchStrict() []string {
+	match := self.matchPattern()
+	if match == nil {
+		return nil
+	}
+	if self.testMethod() {
+		return match
+	}
+	panic(errMethodNotAllowed(self.req()))
+}
+
+func (self Router) req() (string, string) {
 	req := self.Req
 	if req != nil {
-		match := cachedRegexp(pattern).FindStringSubmatch(req.URL.Path)
-		if match != nil {
-			return match[1:]
-		}
-		return nil
+		return req.Method, req.URL.Path
 	}
-	return nil
-}
-
-/*
-Variant of `Router` that matches ONLY on the HTTP method, ignoring the URL path.
-`Router.Methods` passes this to its sub-routing function.
-*/
-type MethodRouter Router
-
-// Same as `.Method(http.MethodGet, fun)`.
-func (self MethodRouter) Get(fun Func) { self.Method(http.MethodGet, fun) }
-
-// Same as `.Method(http.MethodHead, fun)`.
-func (self MethodRouter) Head(fun Func) { self.Method(http.MethodHead, fun) }
-
-// Same as `.Method(http.MethodOptions, fun)`.
-func (self MethodRouter) Options(fun Func) { self.Method(http.MethodOptions, fun) }
-
-// Same as `.Method(http.MethodPost, fun)`.
-func (self MethodRouter) Post(fun Func) { self.Method(http.MethodPost, fun) }
-
-// Same as `.Method(http.MethodPatch, fun)`.
-func (self MethodRouter) Patch(fun Func) { self.Method(http.MethodPatch, fun) }
-
-// Same as `.Method(http.MethodPut, fun)`.
-func (self MethodRouter) Put(fun Func) { self.Method(http.MethodPut, fun) }
-
-// Same as `.Method(http.MethodDelete, fun)`.
-func (self MethodRouter) Delete(fun Func) { self.Method(http.MethodDelete, fun) }
-
-/*
-Similar to `Router.Method`, but matches ONLY on the HTTP method, ignoring the
-URL path.
-*/
-func (self MethodRouter) Method(method string, fun Func) {
-	if Router(self).matchMethod(method) {
-		if fun != nil {
-			fun(self.Rew, self.Req)
-		}
-		panic(nil)
-	}
-}
-
-/*
-Similar to `Router.Any`, but matches ONLY on the HTTP method, ignoring the URL
-path.
-*/
-func (self MethodRouter) Any(fun Func) {
-	if fun != nil {
-		fun(self.Rew, self.Req)
-	}
-	panic(nil)
-}
-
-/*
-Supports parametrized handlers, like `ParamRouter`, and matches ONLY on the HTTP
-method, like `MethodRouter`. `ParamRouter.Methods` passes this to its
-sub-routing function.
-*/
-type ParamMethodRouter struct {
-	ParamRouter
-	Args []string
-}
-
-// Same as `.Method(http.MethodGet, fun)`.
-func (self ParamMethodRouter) Get(fun ParamFunc) { self.Method(http.MethodGet, fun) }
-
-// Same as `.Method(http.MethodHead, fun)`.
-func (self ParamMethodRouter) Head(fun ParamFunc) { self.Method(http.MethodHead, fun) }
-
-// Same as `.Method(http.MethodOptions, fun)`.
-func (self ParamMethodRouter) Options(fun ParamFunc) { self.Method(http.MethodOptions, fun) }
-
-// Same as `.Method(http.MethodPost, fun)`.
-func (self ParamMethodRouter) Post(fun ParamFunc) { self.Method(http.MethodPost, fun) }
-
-// Same as `.Method(http.MethodPatch, fun)`.
-func (self ParamMethodRouter) Patch(fun ParamFunc) { self.Method(http.MethodPatch, fun) }
-
-// Same as `.Method(http.MethodPut, fun)`.
-func (self ParamMethodRouter) Put(fun ParamFunc) { self.Method(http.MethodPut, fun) }
-
-// Same as `.Method(http.MethodDelete, fun)`.
-func (self ParamMethodRouter) Delete(fun ParamFunc) { self.Method(http.MethodDelete, fun) }
-
-/*
-Similar to `ParamRouter.Method`, but matches ONLY on the HTTP method, ignoring
-the URL path.
-*/
-func (self ParamMethodRouter) Method(method string, fun ParamFunc) {
-	if Router(self.ParamRouter).matchMethod(method) {
-		if fun != nil {
-			fun(self.Rew, self.Req, self.Args)
-		}
-		panic(nil)
-	}
-}
-
-/*
-Similar to `ParamRouter.Method`, but matches ONLY on the HTTP method, ignoring
-the URL path.
-*/
-func (self ParamMethodRouter) Any(fun ParamFunc) {
-	if fun != nil {
-		fun(self.Rew, self.Req, self.Args)
-	}
-	panic(nil)
-}
-
-// Type of all errors generated by this package.
-type Err struct {
-	Cause      error `json:"cause"`
-	HttpStatus int   `json:"httpStatus"`
-}
-
-// Implement `error`.
-func (self Err) Error() string {
-	var buf strings.Builder
-	self.writeError(&buf)
-	return buf.String()
-}
-
-// Implement a hidden interface in "errors".
-func (self Err) Is(other error) bool {
-	if self.Cause != nil {
-		return errors.Is(self.Cause, other)
-	}
-	err, ok := other.(Err)
-	return ok && self == err
-}
-
-// Implement a hidden interface in "errors".
-func (self Err) Unwrap() error {
-	return self.Cause
-}
-
-// Support verbose printing via `%+v`.
-func (self Err) Format(fms fmt.State, verb rune) {
-	if verb == 'v' && fms.Flag('+') {
-		self.writeErrorVerbose(fms)
-	} else {
-		self.writeError(fms)
-	}
-}
-
-func (self Err) writeError(out io.Writer) {
-	self.writeErrorShallow(out)
-	if self.Cause != nil {
-		fmt.Fprintf(out, `: %v`, self.Cause)
-	}
-}
-
-func (self Err) writeErrorShallow(out io.Writer) {
-	fmt.Fprintf(out, `%v`, `routing error`)
-	if self.HttpStatus != 0 {
-		fmt.Fprintf(out, ` (HTTP status %v)`, self.HttpStatus)
-	}
-}
-
-func (self Err) writeErrorVerbose(out io.Writer) {
-	self.writeErrorShallow(out)
-	if self.Cause != nil {
-		fmt.Fprintf(out, `: %+v`, self.Cause)
-	}
-}
-
-func errMethodNotAllowed(path string, method string) error {
-	return Err{
-		Cause:      fmt.Errorf(`method %v not allowed for path %q`, method, path),
-		HttpStatus: http.StatusMethodNotAllowed,
-	}
-}
-
-func errNotFound(path string, method string) error {
-	return Err{
-		Cause:      fmt.Errorf(`no endpoint for %v %q`, method, path),
-		HttpStatus: http.StatusNotFound,
-	}
-}
-
-var regexpCache sync.Map
-
-func cachedRegexp(pattern string) *regexp.Regexp {
-	val, ok := regexpCache.Load(pattern)
-	if ok {
-		return val.(*regexp.Regexp)
-	}
-	reg := regexp.MustCompile(pattern)
-	regexpCache.Store(pattern, reg)
-	return reg
-}
-
-func rec(ptr *error) {
-	err := toErr(recover())
-	if err != nil {
-		*ptr = err
-	}
-}
-
-/*
-Should be used with `recover()`:
-
-	err := toErr(recover())
-
-Caution: `recover()` only works when called DIRECTLY inside a deferred function.
-When called ANYWHERE ELSE, even in functions called BY a deferred function,
-it's a nop.
-*/
-func toErr(val interface{}) error {
-	if val == nil {
-		return nil
-	}
-
-	err, _ := val.(error)
-	if err != nil {
-		return err
-	}
-
-	/**
-	We're not prepared to handle non-error, non-nil panics.
-
-	By using `recover()`, we prevent Go from displaying the automatic stacktrace
-	pointing to the place where such a panic was raised. However, such
-	stacktraces are only displayed for panics that crash the process. `net/http`
-	also uses `recover()` for request handlers, so we're not making things any
-	worse.
-	*/
-	panic(val)
+	return ``, ``
 }
