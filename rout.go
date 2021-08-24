@@ -45,7 +45,7 @@ appropriate response. If routing was performed successfully, the error is nil.
 */
 func Route(rew http.ResponseWriter, req *http.Request, fun func(Router)) (err error) {
 	defer rec(&err)
-	fun(Router{rew, req})
+	fun(Router{Rew: rew, Req: req})
 	return errNotFound(req.URL.Path, req.Method)
 }
 

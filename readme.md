@@ -23,7 +23,7 @@ See API docs at https://pkg.go.dev/github.com/mitranim/rout.
 
 `rout` is an evolution of "manual" routing that avoids common router flaws:
 
-* Control flow is still imperative. It _doesn't need middleware_: simply call A before B.
+* Control flow is still imperative. It _doesn't need middleware_: simply call A before/after B.
 * Uses regexps. Compared to custom pattern dialects, this is less surprising and more flexible. (Regexps are compiled only once and cached.)
 * Encourages full URL paths: `^/a/b/c$` instead of `"a", "b", "c"`. This makes the code _searchable_, reducing the need for external docs.
 * Correct "not found" and "method not allowed" semantics out of the box: routing is done by path, _then_ by method. If there's no method match for a method, this immediately generates an error.

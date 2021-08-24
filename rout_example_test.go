@@ -15,6 +15,7 @@ func ExampleRoute() {
 type (
 	Rew = http.ResponseWriter
 	Req = http.Request
+	Res = http.Handler
 )
 
 // Top-level handler that kicks off routing. Note that errors are handled ONLY
