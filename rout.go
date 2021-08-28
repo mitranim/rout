@@ -17,7 +17,7 @@ type (
 
 	// Non-parametrized handler func. Same as `http.HandlerFunc`. The type of
 	// functions passed to `Router.Func`.
-	Func = func(http.ResponseWriter, *http.Request)
+	Func = http.HandlerFunc
 
 	// Parametrized handler func. The type of functions passed to
 	// `Router.ParamFunc`. Takes additional args, produced by parenthesized
@@ -26,12 +26,22 @@ type (
 	ParamFunc = func(http.ResponseWriter, *http.Request, []string)
 
 	// Short for "responder". The type of functions passed to `Router.Res`.
-	Res = func(*http.Request) http.Handler
+	Res func(*http.Request) http.Handler
 
 	// Short for "parametrized responder". The type of functions passed to
 	// `Router.ParamRes`.
 	ParamRes = func(*http.Request, []string) http.Handler
 )
+
+// Implement `http.Handler`.
+func (self Res) ServeHTTP(rew http.ResponseWriter, req *http.Request) {
+	if self != nil {
+		handler := self(req)
+		if handler != nil {
+			handler.ServeHTTP(rew, req)
+		}
+	}
+}
 
 /*
 Routes the given request-response, recovering from panics inherent to the
@@ -205,6 +215,7 @@ func (self Router) Func(val Func) {
 	if !self.test() {
 		return
 	}
+	// Inline to simplify stacktraces.
 	if val != nil {
 		val(self.Rew, self.Req)
 	}
@@ -236,6 +247,7 @@ func (self Router) Res(val Res) {
 	if !self.test() {
 		return
 	}
+	// Inline to simplify stacktraces.
 	if val != nil {
 		val := val(self.Req)
 		if val != nil {

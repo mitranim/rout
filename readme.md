@@ -26,8 +26,8 @@ Examples: see below.
 `rout` is an evolution of "manual" routing that avoids common router flaws:
 
 * Control flow is still imperative. It _doesn't need middleware_: simply call A before/after B.
-* Uses regexps. Compared to custom pattern dialects, this is less surprising and more flexible. (Regexps are compiled only once and cached.)
-* Encourages full URL paths: `^/a/b/c$` instead of `"a", "b", "c"`. This makes the code _searchable_, reducing the need for external docs.
+* Uses regexps. Compared to custom pattern dialects, this is less surprising and more flexible. Regexps are compiled only once and cached.
+* Routing uses full URL paths: `^/a/b/c$` instead of `"/a" "/b" "/c"`. This makes the code _searchable_, reducing the need for external docs.
 * Correct "not found" and "method not allowed" semantics out of the box.
 
 The resulting code is very dense, simple, and clear.
@@ -126,6 +126,10 @@ func writeErrStatus(rew Rew, _ *Req, err error) {
 Because `rout` uses panics for control flow, error handling may involve `defer` and `recover`. Consider using [`github.com/mitranim/try`](https://github.com/mitranim/try).
 
 ## Changelog
+
+### v0.2.1
+
+`Res` now implements `http.Handler`. This is not used internally, but could be handy for users.
 
 ### v0.2.0
 
