@@ -44,6 +44,8 @@ func (self Err) Format(fms fmt.State, verb rune) {
 	}
 }
 
+func (self Err) HttpStatusCode() int { return self.Status }
+
 func (self Err) writeError(out io.Writer) {
 	self.writeErrorShallow(out)
 	if self.Cause != nil {

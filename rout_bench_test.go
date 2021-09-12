@@ -34,7 +34,7 @@ func makeReq() *Req {
 }
 
 func serve(rew Rew, req *Req) {
-	try(rout.Route(rew, req, benchRoutes))
+	try(rout.MakeRouter(rew, req).Route(benchRoutes))
 }
 
 func benchRoutes(r rout.R) {
@@ -80,22 +80,22 @@ func benchRoutesApi(r rout.R) {
 	r.Reg(`^/api/183f4(?:/|$)`).Sub(unreachableRoute)
 	r.Reg(`^/api/3cafa(?:/|$)`).Sub(unreachableRoute)
 	r.Reg(`^/api/05453(?:/|$)`).Sub(unreachableRoute)
-	r.Reg(`^/api/match(?:/|$)`).Sub(apiTwenty)
+	r.Reg(`^/api/match(?:/|$)`).Sub(reachableRoute)
 	panic("unreachable")
 }
 
-func apiTwenty(r rout.R) {
+func reachableRoute(r rout.R) {
 	r.Reg(`^/api/match$`).Methods(unreachableRoute)
 
 	r.Reg(`^/api/match/([^/]+)$`).Methods(func(r rout.R) {
 		r.Get().Res(unreachableRes)
 		r.Put().Res(unreachableRes)
-		r.Post().Func(apiTwentyParamPost)
+		r.Post().Func(reachableFunc)
 		r.Delete().Res(unreachableRes)
 	})
 }
 
-func apiTwentyParamPost(rew Rew, _ *Req) {
+func reachableFunc(rew Rew, _ *Req) {
 	rew.WriteHeader(201)
 }
 

@@ -21,7 +21,7 @@ type (
 // Top-level handler that kicks off routing. Note that errors are handled ONLY
 // in app code. `rout` never touches the response writer.
 func handleRequest(rew Rew, req *Req) {
-	err := rout.Route(rew, req, routes)
+	err := rout.MakeRouter(rew, req).Route(routes)
 	writeErr(rew, req, err)
 }
 

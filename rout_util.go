@@ -1,6 +1,8 @@
 package rout
 
 import (
+	"errors"
+	"net/http"
 	"regexp"
 	"sync"
 )
@@ -69,4 +71,21 @@ func reMatch(str, pattern string) []string {
 		return match[1:]
 	}
 	return nil
+}
+
+func errStatus(err error) (code int) {
+	impl, _ := err.(interface{ HttpStatusCode() int })
+	if impl != nil {
+		code = impl.HttpStatusCode()
+	} else {
+		var impl Err
+		if errors.As(err, &impl) {
+			code = impl.Status
+		}
+	}
+
+	if code == 0 {
+		code = http.StatusInternalServerError
+	}
+	return
 }

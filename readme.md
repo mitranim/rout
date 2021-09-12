@@ -16,8 +16,7 @@ Examples: see below.
 
 ## Why
 
-* Unless your server has only 1-2 endpoints, you need routing.
-  * "Manual" routing generates noisy code.
+* "Manual" routing = noisy code.
 * Most routing libraries are fatally flawed:
   * They sacrifice imperative control flow, then invent "middleware" to work around the resulting problems. Imperative flow is precious. Treasure it. Don't let it go.
   * They invent a custom pattern dialect, with its own limitations and gotchas, instead of simply using regexps.
@@ -48,11 +47,18 @@ type (
   Req = http.Request
 )
 
-// Top-level handler that kicks off routing. Note that errors are handled ONLY
-// in app code. `rout` never touches the response writer.
-func handleRequest(rew Rew, req *Req) {
-  err := rout.Route(rew, req, routes)
-  writeErr(rew, req, err)
+// Top-level handler, simplified. Uses `rout.WriteErr` for error writing.
+func handleRequestSimple(rew Rew, req *Req) {
+  rout.MakeRouter(rew, req).Serve(routes)
+}
+
+// Top-level handler with arbitrary error handling.
+func handleRequestAdvanced(rew Rew, req *Req) {
+  // Errors are handled ONLY in app code. There are no surprises.
+  err := rout.MakeRouter(rew, req).Route(routes)
+
+  // Replace this with custom error handling.
+  rout.WriteErr(rew, err)
 }
 
 // This is not a "builder" function; it's executed for EVERY request.
@@ -126,6 +132,16 @@ func writeErrStatus(rew Rew, _ *Req, err error) {
 Because `rout` uses panics for control flow, error handling may involve `defer` and `recover`. Consider using [`github.com/mitranim/try`](https://github.com/mitranim/try).
 
 ## Changelog
+
+### v0.3.0
+
+Added simple shortcuts:
+
+  * `WriteErr`
+  * `Router.Route`
+  * `Router.Serve`
+
+Breaking: `Route` has been replaced with `Router.Route`.
 
 ### v0.2.1
 

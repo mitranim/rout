@@ -9,7 +9,10 @@ motivation and advantages.
 */
 package rout
 
-import "net/http"
+import (
+	"io"
+	"net/http"
+)
 
 type (
 	// Shortcut for brevity.
@@ -44,14 +47,56 @@ func (self Res) ServeHTTP(rew http.ResponseWriter, req *http.Request) {
 }
 
 /*
-Routes the given request-response, recovering from panics inherent to the
-routing flow. The resulting error is usually of type `Err`, containing an
-appropriate HTTP status code. Your code must handle the error, sending back an
-appropriate response. If routing was performed successfully, the error is nil.
+Makes a router for the given request-response. Usage:
+
+	err := MakeRouter(rew, req).Route(myRoutes)
 */
-func Route(rew http.ResponseWriter, req *http.Request, fun func(Router)) (err error) {
+func MakeRouter(rew http.ResponseWriter, req *http.Request) Router {
+	return Router{Rew: rew, Req: req}
+}
+
+/*
+Shortcut for top-level error handling.
+
+If the error is nil, do nothing. If the error is non-nil, write its message as
+plain text. By default, the HTTP status code is 500. If the error implements
+`interface{ HttpStatusCode() int }` or contains `rout.Err`, HTTP status code is
+derived from the error.
+
+Example:
+
+	rout.WriteErr(rew, rout.MakeRouter(rew, req).Route(myRoutes))
+*/
+func WriteErr(rew http.ResponseWriter, err error) {
+	if err == nil {
+		return
+	}
+	rew.WriteHeader(errStatus(err))
+	_, _ = io.WriteString(rew, err.Error())
+}
+
+/*
+Shortcut for routing with default error handling. Same as `rout.Router.Route`,
+but instead of returning an error, uses `rout.WriteErr` to write it. Example:
+
+	rout.MakeRouter(rew, req).Serve(myRoutes)
+*/
+func (self Router) Serve(fun func(Router)) {
+	WriteErr(self.Rew, self.Route(fun))
+}
+
+/*
+Routes the given request-response, recovering from panics inherent to the
+routing flow of this package. The resulting error is usually of type `Err`,
+containing an appropriate HTTP status code. Your code must handle the error,
+sending back an appropriate response. If routing was performed successfully,
+the error is nil.
+
+Same as `Router.Sub`, but catches panics, returning them as errors.
+*/
+func (self Router) Route(fun func(Router)) (err error) {
 	defer rec(&err)
-	Router{Rew: rew, Req: req}.Sub(fun)
+	self.Sub(fun)
 	return
 }
 
