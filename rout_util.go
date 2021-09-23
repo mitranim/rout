@@ -4,7 +4,16 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"strings"
 	"sync"
+)
+
+type style byte
+
+const (
+	styleRegex style = iota
+	styleExact
+	styleBegin
 )
 
 var regexpCache sync.Map
@@ -57,20 +66,55 @@ func toErr(val interface{}) error {
 	panic(val)
 }
 
-func reTest(str, pattern string) bool {
-	return pattern == `` || cachedRegexp(pattern).MatchString(str)
+func testRegex(path, pattern string) bool {
+	return pattern == `` || cachedRegexp(pattern).MatchString(path)
 }
 
-func reMatch(str, pattern string) []string {
+func testExact(path, pattern string) bool {
+	return path == pattern
+}
+
+func testBegin(path, pattern string) bool {
+	if strings.HasPrefix(path, pattern) {
+		return len(path) == len(pattern) ||
+			hasSlashSuffix(pattern) ||
+			hasSlashPrefix(path[len(pattern):])
+	}
+	return false
+}
+
+func matchRegex(path, pattern string) []string {
 	if pattern == `` {
 		return []string{}
 	}
 
-	match := cachedRegexp(pattern).FindStringSubmatch(str)
+	match := cachedRegexp(pattern).FindStringSubmatch(path)
 	if len(match) >= 1 {
 		return match[1:]
 	}
 	return nil
+}
+
+func matchExact(path, pattern string) []string {
+	if testExact(path, pattern) {
+		return []string{}
+	}
+	return nil
+}
+
+func matchBegin(path, pattern string) []string {
+	if testBegin(path, pattern) {
+		return []string{}
+	}
+	return nil
+}
+
+func hasSlashPrefix(val string) bool {
+	return len(val) > 0 && val[0] == '/'
+}
+
+func hasSlashSuffix(val string) bool {
+	return len(val) > 0 && val[len(val)-1] == '/'
 }
 
 func errStatus(err error) (code int) {

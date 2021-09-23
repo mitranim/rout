@@ -110,16 +110,36 @@ type Router struct {
 
 	pattern string
 	method  string
+	style   style
 	lax     bool
 }
 
 /*
-Returns a router with the provided regexp pattern. The pattern will be used to
-match `req.URL.Path`.
+Takes a regexp pattern and returns a router that will use this pattern to match
+`req.URL.Path`.
 */
-func (self Router) Reg(val string) Router {
-	self.pattern = val
-	return self.Lax(false)
+func (self Router) Regex(val string) Router {
+	return self.pat(val, styleRegex)
+}
+
+/*
+Takes a string and returns a router that tests `req.URL.Path` by matching this
+string exactly. Unlike `Router.Regex`, this doesn't support capture groups;
+parametrized handlers will always receive empty `[]string{}`.
+*/
+func (self Router) Exact(val string) Router {
+	return self.pat(val, styleExact)
+}
+
+/*
+Takes a string and returns a router that tests `req.URL.Path` by requiring that
+it has the provided prefix. Because request path always begins with `/`, the
+prefix must also begin with `/`, but it doesn't have to end with `/`. Unlike
+`Router.Regex`, this doesn't support capture groups; parametrized handlers will
+always receive empty `[]string{}`.
+*/
+func (self Router) Begin(val string) Router {
+	return self.pat(val, styleBegin)
 }
 
 /*
@@ -139,7 +159,7 @@ Returns a router set to lax/permissive mode.
 
 In strict mode (default), whenever the router matches the URL pattern but
 doesn't match the HTTP method, it immediately generates a "method not allowed"
-error. `Router.Reg` automatically switches the router into strict mode.
+error. `Router.Regex` automatically switches the router into strict mode.
 
 In lax mode (opt-in), if either URL pattern or HTTP status doesn't match, the
 router simply proceeds to other routes, without generating an error.
@@ -271,7 +291,7 @@ func (self Router) Func(val Func) {
 If the router matches the request, use the provided handler func to respond. If
 the router doesn't match the request, do nothing. The func may be nil. The
 additional `[]string` argument contains regexp captures from the pattern passed
-to `Router.Reg`, if any.
+to `Router.Regex`, if any.
 */
 func (self Router) ParamFunc(val ParamFunc) {
 	match := self.match()
@@ -306,7 +326,7 @@ func (self Router) Res(val Res) {
 If the router matches the request, use the provided handler func to respond. If
 the router doesn't match the request, do nothing. The func may be nil. The
 additional `[]string` argument contains regexp captures from the pattern passed
-to `Router.Reg`, if any.
+to `Router.Regex`, if any.
 */
 func (self Router) ParamRes(val ParamRes) {
 	match := self.match()
@@ -322,22 +342,19 @@ func (self Router) ParamRes(val ParamRes) {
 	panic(nil)
 }
 
-func (self Router) testMethod() bool {
-	req, method := self.Req, self.method
-	return req != nil && (method == `` || method == req.Method)
+func (self Router) pat(pattern string, style style) Router {
+	self.pattern = pattern
+	self.style = style
+	self.lax = false
+	return self
 }
 
-func (self Router) testPattern() bool {
-	req, pattern := self.Req, self.pattern
-	return req != nil && reTest(req.URL.Path, pattern)
-}
-
-func (self Router) matchPattern() []string {
-	req, pattern := self.Req, self.pattern
-	if req == nil {
-		return nil
+func (self Router) req() (string, string) {
+	req := self.Req
+	if req != nil {
+		return req.Method, req.URL.Path
 	}
-	return reMatch(req.URL.Path, pattern)
+	return ``, ``
 }
 
 func (self Router) test() bool {
@@ -386,10 +403,47 @@ func (self Router) matchStrict() []string {
 	panic(errMethodNotAllowed(self.req()))
 }
 
-func (self Router) req() (string, string) {
+func (self Router) testMethod() bool {
+	req, method := self.Req, self.method
+	return req != nil && (method == `` || method == req.Method)
+}
+
+func (self Router) testPattern() bool {
 	req := self.Req
-	if req != nil {
-		return req.Method, req.URL.Path
+	if req == nil {
+		return false
 	}
-	return ``, ``
+
+	path, pattern, style := req.URL.Path, self.pattern, self.style
+
+	switch style {
+	case styleRegex:
+		return testRegex(path, pattern)
+	case styleExact:
+		return testExact(path, pattern)
+	case styleBegin:
+		return testBegin(path, pattern)
+	default:
+		return false
+	}
+}
+
+func (self Router) matchPattern() []string {
+	req := self.Req
+	if req == nil {
+		return nil
+	}
+
+	path, pattern, style := req.URL.Path, self.pattern, self.style
+
+	switch style {
+	case styleRegex:
+		return matchRegex(path, pattern)
+	case styleExact:
+		return matchExact(path, pattern)
+	case styleBegin:
+		return matchBegin(path, pattern)
+	default:
+		return nil
+	}
 }

@@ -67,10 +67,10 @@ func handleRequestAdvanced(rew Rew, req *Req) {
 // paths cause the router to return error 405. The error is handled by YOUR
 // code, which is an important advantage; see `handleRequest` above.
 func routes(r rout.R) {
-  r.Reg(`^/$`).Get().Func(pageIndex)
-  r.Reg(`^/articles$`).Get().Func(pageArticles)
-  r.Reg(`^/articles/([^/]+)$`).Get().ParamFunc(pageArticle)
-  r.Reg(`^/api(?:/|$)`).Sub(routesApi)
+  r.Exact(`/`).Get().Func(pageIndex)
+  r.Exact(`/articles`).Get().Func(pageArticles)
+  r.Regex(`^/articles/([^/]+)$`).Get().ParamFunc(pageArticle)
+  r.Begin(`/api`).Sub(routesApi)
   r.Get().Handler(fileServer)
 }
 
@@ -83,17 +83,17 @@ func routesApi(r rout.R) {
   // With `rout`, you just call A before B.
   allowCors(r.Rew.Header())
 
-  r.Reg(`^/api/articles(?:/|$)`).Sub(routesApiArticles)
+  r.Begin(`/api/articles`).Sub(routesApiArticles)
 }
 
 // This is not a "builder" function; it's executed for EVERY request that gets
 // routed to it.
 func routesApiArticles(r rout.R) {
-  r.Reg(`^/api/articles$`).Methods(func(r rout.R) {
+  r.Exact(`/api/articles`).Methods(func(r rout.R) {
     r.Get().Func(apiArticleFeed)
     r.Post().Func(apiArticleCreate)
   })
-  r.Reg(`^/api/articles/([^/]+)$`).Methods(func(r rout.R) {
+  r.Regex(`^/api/articles/([^/]+)$`).Methods(func(r rout.R) {
     r.Get().ParamFunc(apiArticleGet)
     r.Patch().ParamFunc(apiArticleUpdate)
     r.Delete().ParamFunc(apiArticleDelete)
@@ -101,15 +101,15 @@ func routesApiArticles(r rout.R) {
 }
 
 // Oversimplified for example's sake.
-func allowCors(head http.Header)                         {}
-func pageIndex(rew Rew, req *Req)                        {}
-func pageArticles(rew Rew, req *Req)                     {}
-func pageArticle(rew Rew, req *Req, match []string)      {}
-func apiArticleFeed(rew Rew, req *Req)                   {}
-func apiArticleCreate(rew Rew, req *Req)                 {}
-func apiArticleGet(rew Rew, req *Req, match []string)    {}
-func apiArticleUpdate(rew Rew, req *Req, match []string) {}
-func apiArticleDelete(rew Rew, req *Req, match []string) {}
+func allowCors(head http.Header)                        {}
+func pageIndex(rew Rew, req *Req)                       {}
+func pageArticles(rew Rew, req *Req)                    {}
+func pageArticle(rew Rew, req *Req, args []string)      {}
+func apiArticleFeed(rew Rew, req *Req)                  {}
+func apiArticleCreate(rew Rew, req *Req)                {}
+func apiArticleGet(rew Rew, req *Req, args []string)    {}
+func apiArticleUpdate(rew Rew, req *Req, args []string) {}
+func apiArticleDelete(rew Rew, req *Req, args []string) {}
 
 // Oversimplified for example's sake.
 func writeErr(rew Rew, req *Req, err error) {
@@ -132,6 +132,19 @@ func writeErrStatus(rew Rew, _ *Req, err error) {
 Because `rout` uses panics for control flow, error handling may involve `defer` and `recover`. Consider using [`github.com/mitranim/try`](https://github.com/mitranim/try).
 
 ## Changelog
+
+### v0.4.0
+
+Support multiple ways of URL matching:
+
+  * `Router.Regex` → by regexp (supports capture groups)
+  * `Router.Exact` → by exact match (no capture groups)
+  * `Router.Begin` → by prefix (no capture groups)
+
+Breaking: renamed `Router.Reg` → `Router.Regex` for symmetry with the other path pattern methods.
+
+Most routes can be expressed with exact or prefix matches. Regexps are needed
+only for capturing args. This makes routing simpler, clearer, and less error-prone. It also significantly improves performance, compared to using regexps for everything.
 
 ### v0.3.0
 
