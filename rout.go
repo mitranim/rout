@@ -147,7 +147,7 @@ Returns a router that matches only the provided method. If the method is empty,
 the resulting router matches all methods, which is the default.
 
 Note: to match multiple methods for one route, use `Router.Methods`. Otherwise,
-the first mismatch generates `Err{Status: http.StatusMethodNotAllowed`}.
+the first mismatch generates `Err{Status: http.StatusMethodNotAllowed}`.
 */
 func (self Router) Method(val string) Router {
 	self.method = val
