@@ -1,22 +1,12 @@
 package rout_test
 
 import (
-	"fmt"
 	"net/http"
 	ht "net/http/httptest"
-	"reflect"
 	"testing"
 
 	"github.com/mitranim/rout"
 )
-
-func TestRoute(t *testing.T) {
-	rew := ht.NewRecorder()
-	req := makeReq()
-
-	serve(rew, req)
-	eq(201, rew.Code)
-}
 
 func BenchmarkRoute(b *testing.B) {
 	rew := ht.NewRecorder()
@@ -62,24 +52,26 @@ func benchRoutesApi(r rout.R) {
 	r.Begin(`/api/c2bce`).Sub(unreachableRoute)
 	r.Begin(`/api/24bef`).Sub(unreachableRoute)
 	r.Begin(`/api/091ee`).Sub(unreachableRoute)
-	r.Begin(`/api/782d4`).Sub(unreachableRoute)
-	r.Begin(`/api/eeabb`).Sub(unreachableRoute)
-	r.Begin(`/api/5ffc7`).Sub(unreachableRoute)
-	r.Begin(`/api/0f265`).Sub(unreachableRoute)
-	r.Begin(`/api/2c970`).Sub(unreachableRoute)
-	r.Begin(`/api/ac36c`).Sub(unreachableRoute)
-	r.Begin(`/api/8b8d8`).Sub(unreachableRoute)
-	r.Begin(`/api/3faf4`).Sub(unreachableRoute)
-	r.Begin(`/api/65ddd`).Sub(unreachableRoute)
-	r.Begin(`/api/34f35`).Sub(unreachableRoute)
-	r.Begin(`/api/f74f2`).Sub(unreachableRoute)
-	r.Begin(`/api/8031d`).Sub(unreachableRoute)
-	r.Begin(`/api/9bfb8`).Sub(unreachableRoute)
-	r.Begin(`/api/cf538`).Sub(unreachableRoute)
-	r.Begin(`/api/becce`).Sub(unreachableRoute)
-	r.Begin(`/api/183f4`).Sub(unreachableRoute)
-	r.Begin(`/api/3cafa`).Sub(unreachableRoute)
-	r.Begin(`/api/05453`).Sub(unreachableRoute)
+	r.Begin(`/api/782d4`).Res(unreachableRes)
+	r.Begin(`/api/eeabb`).Res(unreachableRes)
+	r.Begin(`/api/5ffc7`).Res(unreachableRes)
+	r.Begin(`/api/0f265`).Res(unreachableRes)
+	r.Begin(`/api/2c970`).Res(unreachableRes)
+	r.Begin(`/api/ac36c`).Res(unreachableRes)
+	r.Begin(`/api/8b8d8`).Res(unreachableRes)
+	r.Begin(`/api/3faf4`).Res(unreachableRes)
+	r.Begin(`/api/65ddd`).Res(unreachableRes)
+	r.Begin(`/api/34f35`).Res(unreachableRes)
+	r.Begin(`/api/f74f2`).Res(unreachableRes)
+	r.Begin(`/api/8031d`).Res(unreachableRes)
+	r.Begin(`/api/9bfb8`).Res(unreachableRes)
+	r.Begin(`/api/cf538`).Res(unreachableRes)
+	r.Begin(`/api/becce`).Res(unreachableRes)
+	r.Begin(`/api/183f4`).Res(unreachableRes)
+	r.Begin(`/api/3cafa`).Res(unreachableRes)
+	r.Begin(`/api/05453`).Res(unreachableRes)
+	r.Begin(`/api/f25c7`).Res(unreachableRes)
+	r.Begin(`/api/2e1f1`).Res(unreachableRes)
 	r.Begin(`/api/match`).Sub(reachableRoute)
 	panic("unreachable")
 }
@@ -101,17 +93,3 @@ func reachableFunc(rew Rew, _ *Req) {
 
 func unreachableRoute(rout.R) { panic("unreachable") }
 func unreachableRes(*Req) Res { panic("unreachable") }
-
-func eq(exp, act interface{}) {
-	if !reflect.DeepEqual(exp, act) {
-		panic(fmt.Errorf("expected:\n%#v\ngot:\n%#v\n", exp, act))
-	}
-}
-
-func counter(n int) []struct{} { return make([]struct{}, n) }
-
-func try(err error) {
-	if err != nil {
-		panic(err)
-	}
-}

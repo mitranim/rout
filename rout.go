@@ -276,13 +276,13 @@ func (self Router) Handler(val http.Handler) {
 If the router matches the request, use the provided handler func to respond.
 If the router doesn't match the request, do nothing. The func may be nil.
 */
-func (self Router) Func(val Func) {
+func (self Router) Func(fun Func) {
 	if !self.test() {
 		return
 	}
 	// Inline to simplify stacktraces.
-	if val != nil {
-		val(self.Rew, self.Req)
+	if fun != nil {
+		fun(self.Rew, self.Req)
 	}
 	panic(nil)
 }
@@ -293,52 +293,67 @@ the router doesn't match the request, do nothing. The func may be nil. The
 additional `[]string` argument contains regexp captures from the pattern passed
 to `Router.Regex`, if any.
 */
-func (self Router) ParamFunc(val ParamFunc) {
+func (self Router) ParamFunc(fun ParamFunc) {
 	match := self.match()
 	if match == nil {
 		return
 	}
-	if val != nil {
-		val(self.Rew, self.Req, match)
+	if fun != nil {
+		fun(self.Rew, self.Req, match)
 	}
 	panic(nil)
 }
 
 /*
-If the router matches the request, use the provided handler func to respond. If
-the router doesn't match the request, do nothing. The func may be nil.
+If the router matches the request, respond by using the first non-nil handler
+returned by one of the provided funcs. If the router doesn't match the request,
+do nothing.
 */
-func (self Router) Res(val Res) {
+func (self Router) Res(funs ...Res) {
 	if !self.test() {
 		return
 	}
+
 	// Inline to simplify stacktraces.
-	if val != nil {
-		val := val(self.Req)
+	for _, fun := range funs {
+		if fun == nil {
+			continue
+		}
+
+		val := fun(self.Req)
 		if val != nil {
 			val.ServeHTTP(self.Rew, self.Req)
+			panic(nil)
 		}
 	}
+
 	panic(nil)
 }
 
 /*
-If the router matches the request, use the provided handler func to respond. If
-the router doesn't match the request, do nothing. The func may be nil. The
-additional `[]string` argument contains regexp captures from the pattern passed
-to `Router.Regex`, if any.
+If the router matches the request, respond by using the first non-nil handler
+returned by one of the provided funcs. If the router doesn't match the request,
+do nothing. The additional `[]string` argument contains regexp captures from
+the pattern passed to `Router.Regex`, if any.
 */
-func (self Router) ParamRes(val ParamRes) {
+func (self Router) ParamRes(funs ...ParamRes) {
 	match := self.match()
 	if match == nil {
 		return
 	}
-	if val != nil {
-		val := val(self.Req, match)
+
+	for _, fun := range funs {
+		if fun == nil {
+			continue
+		}
+
+		val := fun(self.Req, match)
 		if val != nil {
 			val.ServeHTTP(self.Rew, self.Req)
+			panic(nil)
 		}
 	}
+
 	panic(nil)
 }
 
@@ -446,4 +461,32 @@ func (self Router) matchPattern() []string {
 	default:
 		return nil
 	}
+}
+
+/*
+HTTP handler type that behaves similarly to `Router.Res` or `Router.ParamRes`.
+Stores multiple `Res` functions, and when serving HTTP, uses the first non-nil
+`http.Handler` returned by one of those functions.
+*/
+type Coalesce []Res
+
+// Implement `http.Handler`.
+func (self Coalesce) ServeHTTP(rew http.ResponseWriter, req *http.Request) {
+	val := self.Res(req)
+	if val != nil {
+		val.ServeHTTP(rew, req)
+	}
+}
+
+// Invokes the funcs in order, returning the first resulting non-nil handler.
+func (self Coalesce) Res(req *http.Request) http.Handler {
+	for _, fun := range self {
+		if fun != nil {
+			val := fun(req)
+			if val != nil {
+				return val
+			}
+		}
+	}
+	return nil
 }

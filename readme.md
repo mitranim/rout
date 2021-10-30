@@ -18,7 +18,7 @@ Examples: see below.
 
 ## Why
 
-* "Manual" routing = noisy code.
+* You want a router because "manual" routing requires too much code.
 * Most routing libraries are fatally flawed:
   * They sacrifice imperative control flow, then invent "middleware" to work around the resulting problems. Imperative flow is precious. Treasure it. Don't let it go.
   * They invent a custom pattern dialect, with its own limitations and gotchas, instead of simply using regexps.
@@ -117,6 +117,10 @@ func apiArticleDelete(req *Req, args []string) Res { return goh.StringOk(`ok`) }
 Because `rout` uses panics for control flow, error handling may involve `defer` and `recover`. Consider using [`github.com/mitranim/try`](https://github.com/mitranim/try).
 
 ## Changelog
+
+### v0.4.1
+
+`Router.Res` and `Router.ParamRes` are now variadic, accepting multiple funcs. They try the funs sequentially until one of the funcs returns a non-nil handler. Also added `Coalesce` which provides similar behavior without a router.
 
 ### v0.4.0
 
