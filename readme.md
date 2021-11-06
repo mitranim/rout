@@ -2,11 +2,13 @@
 
 Experimental router for Go HTTP servers. Imperative control flow with declarative syntax. Doesn't need middleware.
 
-Very simple, small (≈300 LoC without docs), dependency-free, reasonably fast.
+Very simple, small (≈300 LoC not counting docs), dependency-free, reasonably fast.
 
 Recommended in conjunction with [`github.com/mitranim/goh`](https://github.com/mitranim/goh), which implements various "response" types that satisfy `http.Handler`.
 
 API docs: https://pkg.go.dev/github.com/mitranim/rout.
+
+Performance: routing through a moderately-sized routing table of a production application can take a few microseconds, with no forced allocations.
 
 Examples: see below.
 
@@ -117,6 +119,10 @@ func apiArticleDelete(req *Req, args []string) Res { return goh.StringOk(`ok`) }
 Because `rout` uses panics for control flow, error handling may involve `defer` and `recover`. Consider using [`github.com/mitranim/try`](https://github.com/mitranim/try).
 
 ## Changelog
+
+### v0.4.2
+
+`WriteErr` and `Router.Serve` now perform deep error unwrapping to obtain the HTTP status code of an error.
 
 ### v0.4.1
 

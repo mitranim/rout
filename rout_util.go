@@ -117,19 +117,26 @@ func hasSlashSuffix(val string) bool {
 	return len(val) > 0 && val[len(val)-1] == '/'
 }
 
-func errStatus(err error) (code int) {
-	impl, _ := err.(interface{ HttpStatusCode() int })
-	if impl != nil {
-		code = impl.HttpStatusCode()
-	} else {
-		var impl Err
-		if errors.As(err, &impl) {
-			code = impl.Status
-		}
-	}
-
+func errStatus(err error) int {
+	code := errStatusDeep(err)
 	if code == 0 {
-		code = http.StatusInternalServerError
+		return http.StatusInternalServerError
 	}
-	return
+	return code
+}
+
+func errStatusDeep(err error) int {
+	for err != nil {
+		impl, _ := err.(interface{ HttpStatusCode() int })
+		if impl != nil {
+			return impl.HttpStatusCode()
+		}
+
+		un := errors.Unwrap(err)
+		if un == err {
+			return 0
+		}
+		err = un
+	}
+	return 0
 }
