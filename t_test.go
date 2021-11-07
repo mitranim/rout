@@ -21,6 +21,19 @@ func TestRoute(t *testing.T) {
 	eq(t, 201, rew.Code)
 }
 
+func TestErrStatus(t *testing.T) {
+	test := func(exp int, err error) {
+		t.Helper()
+		eq(t, exp, rout.ErrStatus(err))
+	}
+
+	test(http.StatusInternalServerError, nil)
+	test(http.StatusInternalServerError, io.EOF)
+	test(http.StatusInternalServerError, rout.Err{})
+	test(http.StatusBadRequest, rout.Err{Status: http.StatusBadRequest})
+	test(http.StatusBadRequest, fmt.Errorf(`wrapped: %w`, rout.Err{Status: http.StatusBadRequest}))
+}
+
 func TestWriteErr(t *testing.T) {
 	test := func(exp int, err error) {
 		t.Helper()

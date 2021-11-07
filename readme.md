@@ -120,6 +120,10 @@ Because `rout` uses panics for control flow, error handling may involve `defer` 
 
 ## Changelog
 
+### v0.4.3
+
+Exported `ErrStatus`.
+
 ### v0.4.2
 
 `WriteErr` and `Router.Serve` now perform deep error unwrapping to obtain the HTTP status code of an error.

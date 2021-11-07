@@ -59,9 +59,7 @@ func MakeRouter(rew http.ResponseWriter, req *http.Request) Router {
 Shortcut for top-level error handling.
 
 If the error is nil, do nothing. If the error is non-nil, write its message as
-plain text. By default, the HTTP status code is 500. If the error implements
-`interface{ HttpStatusCode() int }` or contains `rout.Err`, HTTP status code is
-derived from the error.
+plain text. HTTP status code is obtained via `rout.ErrStatus`.
 
 Example:
 
@@ -71,8 +69,25 @@ func WriteErr(rew http.ResponseWriter, err error) {
 	if err == nil {
 		return
 	}
-	rew.WriteHeader(errStatus(err))
+	rew.WriteHeader(ErrStatus(err))
 	_, _ = io.WriteString(rew, err.Error())
+}
+
+/*
+Returns the underlying HTTP status code of the given error, relying on the
+following hidden interface which is implemented by `rout.Err`. The interface
+may be implemented by deeply-wrapped errors; this performs deep unwrapping.
+
+	interface { HttpStatusCode() int }
+
+If the error is nil or doesn't implement this interface, status is 500.
+*/
+func ErrStatus(err error) int {
+	code := errStatusDeep(err)
+	if code == 0 {
+		return http.StatusInternalServerError
+	}
+	return code
 }
 
 /*

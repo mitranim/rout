@@ -2,7 +2,6 @@ package rout
 
 import (
 	"errors"
-	"net/http"
 	"regexp"
 	"strings"
 	"sync"
@@ -115,14 +114,6 @@ func hasSlashPrefix(val string) bool {
 
 func hasSlashSuffix(val string) bool {
 	return len(val) > 0 && val[len(val)-1] == '/'
-}
-
-func errStatus(err error) int {
-	code := errStatusDeep(err)
-	if code == 0 {
-		return http.StatusInternalServerError
-	}
-	return code
 }
 
 func errStatusDeep(err error) int {
