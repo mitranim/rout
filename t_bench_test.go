@@ -1,11 +1,18 @@
 package rout_test
 
 import (
+	"fmt"
 	"net/http"
 	ht "net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/mitranim/rout"
+)
+
+var (
+	stringNop = func(string) {}
+	errorNop  = func(error) {}
 )
 
 func BenchmarkRoute(b *testing.B) {
@@ -19,11 +26,11 @@ func BenchmarkRoute(b *testing.B) {
 	}
 }
 
-func makeReq() *Req {
+func makeReq() Req {
 	return ht.NewRequest(http.MethodPost, `/api/match/0e60feee70b241d38aa37ab55378f926`, nil)
 }
 
-func serve(rew Rew, req *Req) {
+func serve(rew Rew, req Req) {
 	try(rout.MakeRouter(rew, req).Route(benchRoutes))
 }
 
@@ -87,9 +94,77 @@ func reachableRoute(r rout.R) {
 	})
 }
 
-func reachableFunc(rew Rew, _ *Req) {
+func reachableFunc(rew Rew, _ Req) {
 	rew.WriteHeader(201)
 }
 
 func unreachableRoute(rout.R) { panic("unreachable") }
-func unreachableRes(*Req) Res { panic("unreachable") }
+func unreachableRes(Req) Res  { panic("unreachable") }
+
+func Benchmark_error_ErrNotFound_string(b *testing.B) {
+	for range counter(b.N) {
+		stringNop(rout.NotFound(http.MethodPost, `/some/path`).Error())
+	}
+}
+
+func Benchmark_error_ErrNotFound_interface(b *testing.B) {
+	for range counter(b.N) {
+		errorNop(rout.NotFound(http.MethodPost, `/some/path`))
+	}
+}
+
+func Benchmark_error_fmt_Errorf(b *testing.B) {
+	for range counter(b.N) {
+		errorNop(fmt.Errorf(
+			`[rout] routing error (HTTP status 404): no such endpoint: %q %q`,
+			http.MethodPost, `/some/path`,
+		))
+	}
+}
+
+func Benchmark_error_fmt_Sprintf(b *testing.B) {
+	for range counter(b.N) {
+		stringNop(fmt.Sprintf(
+			`[rout] routing error (HTTP status 404): no such endpoint: %q %q`,
+			http.MethodPost, `/some/path`,
+		))
+	}
+}
+
+func Benchmark_error_fmt_Sprintf_ErrNotFound(b *testing.B) {
+	for range counter(b.N) {
+		errorNop(rout.ErrNotFound(fmt.Sprintf(
+			`[rout] routing error (HTTP status 404): no such endpoint: %q %q`,
+			http.MethodPost, `/some/path`,
+		)))
+	}
+}
+
+func Benchmark_bound_methods(b *testing.B) {
+	for range counter(b.N) {
+		benchBoundMethod()
+	}
+}
+
+func benchBoundMethod() {
+	_ = rout.MakeRouter(nil, staticReq).Route(staticState.Route)
+}
+
+var staticReq = &http.Request{
+	Method: http.MethodPatch,
+	URL:    &url.URL{Path: `/patch`},
+}
+
+var staticState State
+
+type State struct{ _ map[string]string }
+
+func (self *State) Route(r rout.R) {
+	r.Exact(`/get`).Get().Func(self.Get)
+	r.Exact(`/post`).Post().Res(self.Post)
+	r.Exact(`/patch`).Patch().Res(self.Patch)
+}
+
+func (self *State) Get(http.ResponseWriter, *http.Request) { panic(`unreachable`) }
+func (self *State) Post(*http.Request) http.Handler        { panic(`unreachable`) }
+func (self *State) Patch(*http.Request) http.Handler       { return nil }

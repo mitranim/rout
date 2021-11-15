@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"unsafe"
 )
 
 type style byte
@@ -130,4 +131,28 @@ func errStatusDeep(err error) int {
 		err = un
 	}
 	return 0
+}
+
+func intLen(val int) (count int) {
+	if val < 0 {
+		count++
+	}
+	for {
+		count++
+		val /= 10
+		if val == 0 {
+			break
+		}
+	}
+	return
+}
+
+/*
+Allocation-free conversion. Reinterprets a byte slice as a string. Borrowed from
+the standard library. Reasonably safe. Should not be used when the underlying
+byte array is volatile, for example when it's part of a scratch buffer during
+SQL scanning.
+*/
+func bytesString(bytes []byte) string {
+	return *(*string)(unsafe.Pointer(&bytes))
 }

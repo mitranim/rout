@@ -1,6 +1,7 @@
 *
-!.gitignore
-!go.mod
-!*.go
-!*.md
-!unlicense
+!/.gitignore
+!/go.mod
+!/*.go
+!/*.md
+!/makefile
+!/unlicense

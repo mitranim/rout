@@ -1,15 +1,15 @@
 package rout_test
 
 import (
+	"io"
 	"net/http"
 
-	"github.com/mitranim/goh"
 	"github.com/mitranim/rout"
 )
 
 type (
 	Rew = http.ResponseWriter
-	Req = http.Request
+	Req = *http.Request
 	Res = http.Handler
 )
 
@@ -20,7 +20,7 @@ func ExampleRouter_Route() {
 }
 
 // Top-level request handler.
-func handleRequest(rew Rew, req *Req) {
+func handleRequest(rew Rew, req Req) {
 	// Errors are handled ONLY in app code. There are no surprises.
 	err := rout.MakeRouter(rew, req).Route(routes)
 
@@ -64,12 +64,16 @@ func routesApiArticles(r rout.R) {
 }
 
 // Oversimplified for example's sake.
-func allowCors(head http.Header)                   {}
-func pageIndex(req *Req) Res                       { return goh.StringOk(`ok`) }
-func pageArticles(req *Req) Res                    { return goh.StringOk(`ok`) }
-func pageArticle(req *Req, args []string) Res      { return goh.StringOk(`ok`) }
-func apiArticleFeed(req *Req) Res                  { return goh.StringOk(`ok`) }
-func apiArticleCreate(req *Req) Res                { return goh.StringOk(`ok`) }
-func apiArticleGet(req *Req, args []string) Res    { return goh.StringOk(`ok`) }
-func apiArticleUpdate(req *Req, args []string) Res { return goh.StringOk(`ok`) }
-func apiArticleDelete(req *Req, args []string) Res { return goh.StringOk(`ok`) }
+func allowCors(head http.Header)                  {}
+func pageIndex(req Req) Res                       { return Str(`ok`) }
+func pageArticles(req Req) Res                    { return Str(`ok`) }
+func pageArticle(req Req, args []string) Res      { return Str(`ok`) }
+func apiArticleFeed(req Req) Res                  { return Str(`ok`) }
+func apiArticleCreate(req Req) Res                { return Str(`ok`) }
+func apiArticleGet(req Req, args []string) Res    { return Str(`ok`) }
+func apiArticleUpdate(req Req, args []string) Res { return Str(`ok`) }
+func apiArticleDelete(req Req, args []string) Res { return Str(`ok`) }
+
+type Str string
+
+func (self Str) ServeHTTP(rew Rew, _ Req) { io.WriteString(rew, string(self)) }

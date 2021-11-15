@@ -8,7 +8,7 @@ Recommended in conjunction with [`github.com/mitranim/goh`](https://github.com/m
 
 API docs: https://pkg.go.dev/github.com/mitranim/rout.
 
-Performance: routing through a moderately-sized routing table of a production application can take a few microseconds, with no forced allocations.
+Performance: routing through a moderately-sized routing table of a production application can take a few microseconds, with no forced allocations on success.
 
 Examples: see below.
 
@@ -47,19 +47,19 @@ import (
 
 type (
   Rew = http.ResponseWriter
-  Req = http.Request
+  Req = *http.Request
   Res = http.Handler
 )
 
 var fileServer = http.FileServer(http.Dir(`public`))
 
 // Top-level handler, simplified. Uses `rout.WriteErr` for error writing.
-func handleRequestSimple(rew Rew, req *Req) {
+func handleRequestSimple(rew Rew, req Req) {
   rout.MakeRouter(rew, req).Serve(routes)
 }
 
 // Top-level handler with arbitrary error handling.
-func handleRequestAdvanced(rew Rew, req *Req) {
+func handleRequestAdvanced(rew Rew, req Req) {
   // Errors are handled ONLY in app code. There are no surprises.
   err := rout.MakeRouter(rew, req).Route(routes)
 
@@ -103,15 +103,15 @@ func routesApiArticles(r rout.R) {
 }
 
 // Oversimplified for example's sake.
-func allowCors(head http.Header)                   {}
-func pageIndex(req *Req) Res                       { return goh.StringOk(`ok`) }
-func pageArticles(req *Req) Res                    { return goh.StringOk(`ok`) }
-func pageArticle(req *Req, args []string) Res      { return goh.StringOk(`ok`) }
-func apiArticleFeed(req *Req) Res                  { return goh.StringOk(`ok`) }
-func apiArticleCreate(req *Req) Res                { return goh.StringOk(`ok`) }
-func apiArticleGet(req *Req, args []string) Res    { return goh.StringOk(`ok`) }
-func apiArticleUpdate(req *Req, args []string) Res { return goh.StringOk(`ok`) }
-func apiArticleDelete(req *Req, args []string) Res { return goh.StringOk(`ok`) }
+func allowCors(head http.Header)                  {}
+func pageIndex(req Req) Res                       { return goh.StringOk(`ok`) }
+func pageArticles(req Req) Res                    { return goh.StringOk(`ok`) }
+func pageArticle(req Req, args []string) Res      { return goh.StringOk(`ok`) }
+func apiArticleFeed(req Req) Res                  { return goh.StringOk(`ok`) }
+func apiArticleCreate(req Req) Res                { return goh.StringOk(`ok`) }
+func apiArticleGet(req Req, args []string) Res    { return goh.StringOk(`ok`) }
+func apiArticleUpdate(req Req, args []string) Res { return goh.StringOk(`ok`) }
+func apiArticleDelete(req Req, args []string) Res { return goh.StringOk(`ok`) }
 ```
 
 ## Caveats
@@ -119,6 +119,10 @@ func apiArticleDelete(req *Req, args []string) Res { return goh.StringOk(`ok`) }
 Because `rout` uses panics for control flow, error handling may involve `defer` and `recover`. Consider using [`github.com/mitranim/try`](https://github.com/mitranim/try).
 
 ## Changelog
+
+### v0.4.4
+
+Optimize error creation: hundreds of nanoseconds → tens of nanoseconds.
 
 ### v0.4.3
 

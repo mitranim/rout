@@ -226,7 +226,7 @@ func (self Router) Sub(fun func(Router)) {
 	if fun != nil {
 		fun(self)
 	}
-	panic(errNotFound(self.req()))
+	panic(NotFound(self.req()))
 }
 
 /*
@@ -247,7 +247,7 @@ func (self Router) Methods(fun func(Router)) {
 		fun(self.Lax(true))
 	}
 
-	panic(errMethodNotAllowed(self.req()))
+	panic(MethodNotAllowed(self.req()))
 }
 
 /*
@@ -405,7 +405,7 @@ func (self Router) testStrict() bool {
 	if self.testMethod() {
 		return true
 	}
-	panic(errMethodNotAllowed(self.req()))
+	panic(MethodNotAllowed(self.req()))
 }
 
 func (self Router) match() []string {
@@ -430,7 +430,7 @@ func (self Router) matchStrict() []string {
 	if self.testMethod() {
 		return match
 	}
-	panic(errMethodNotAllowed(self.req()))
+	panic(MethodNotAllowed(self.req()))
 }
 
 func (self Router) testMethod() bool {

@@ -29,9 +29,9 @@ func TestErrStatus(t *testing.T) {
 
 	test(http.StatusInternalServerError, nil)
 	test(http.StatusInternalServerError, io.EOF)
-	test(http.StatusInternalServerError, rout.Err{})
-	test(http.StatusBadRequest, rout.Err{Status: http.StatusBadRequest})
-	test(http.StatusBadRequest, fmt.Errorf(`wrapped: %w`, rout.Err{Status: http.StatusBadRequest}))
+	test(http.StatusNotFound, rout.NotFound(``, ``))
+	test(http.StatusMethodNotAllowed, rout.MethodNotAllowed(``, ``))
+	test(http.StatusNotFound, fmt.Errorf(`wrapped: %w`, rout.NotFound(``, ``)))
 }
 
 func TestWriteErr(t *testing.T) {
@@ -51,9 +51,9 @@ func TestWriteErr(t *testing.T) {
 
 	test(http.StatusOK, nil)
 	test(http.StatusInternalServerError, io.EOF)
-	test(http.StatusInternalServerError, rout.Err{})
-	test(http.StatusBadRequest, rout.Err{Status: http.StatusBadRequest})
-	test(http.StatusBadRequest, fmt.Errorf(`wrapped: %w`, rout.Err{Status: http.StatusBadRequest}))
+	test(http.StatusNotFound, rout.NotFound(``, ``))
+	test(http.StatusMethodNotAllowed, rout.MethodNotAllowed(``, ``))
+	test(http.StatusNotFound, fmt.Errorf(`wrapped: %w`, rout.NotFound(``, ``)))
 }
 
 func eq(t testing.TB, exp, act interface{}) {
