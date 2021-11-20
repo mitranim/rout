@@ -48,7 +48,7 @@ import (
 type (
   Rew = http.ResponseWriter
   Req = *http.Request
-  Res = http.Handler
+  Han = http.Handler
 )
 
 var fileServer = http.FileServer(http.Dir(`public`))
@@ -73,9 +73,9 @@ func handleRequestAdvanced(rew Rew, req Req) {
 // paths cause the router to return error 405. The error is handled by YOUR
 // code, which is an important advantage; see the handlers above.
 func routes(r rout.R) {
-  r.Exact(`/`).Get().Res(pageIndex)
-  r.Exact(`/articles`).Get().Res(pageArticles)
-  r.Regex(`^/articles/([^/]+)$`).Get().ParamRes(pageArticle)
+  r.Exact(`/`).Get().Han(pageIndex)
+  r.Exact(`/articles`).Get().Han(pageArticles)
+  r.Regex(`^/articles/([^/]+)$`).Get().ParamHan(pageArticle)
   r.Begin(`/api`).Sub(routesApi)
   r.Get().Handler(fileServer)
 }
@@ -92,26 +92,26 @@ func routesApi(r rout.R) {
 // This is executed for every request that gets routed to it.
 func routesApiArticles(r rout.R) {
   r.Exact(`/api/articles`).Methods(func(r rout.R) {
-    r.Get().Res(apiArticleFeed)
-    r.Post().Res(apiArticleCreate)
+    r.Get().Han(apiArticleFeed)
+    r.Post().Han(apiArticleCreate)
   })
   r.Regex(`^/api/articles/([^/]+)$`).Methods(func(r rout.R) {
-    r.Get().ParamRes(apiArticleGet)
-    r.Patch().ParamRes(apiArticleUpdate)
-    r.Delete().ParamRes(apiArticleDelete)
+    r.Get().ParamHan(apiArticleGet)
+    r.Patch().ParamHan(apiArticleUpdate)
+    r.Delete().ParamHan(apiArticleDelete)
   })
 }
 
 // Oversimplified for example's sake.
 func allowCors(head http.Header)                  {}
-func pageIndex(req Req) Res                       { return goh.StringOk(`ok`) }
-func pageArticles(req Req) Res                    { return goh.StringOk(`ok`) }
-func pageArticle(req Req, args []string) Res      { return goh.StringOk(`ok`) }
-func apiArticleFeed(req Req) Res                  { return goh.StringOk(`ok`) }
-func apiArticleCreate(req Req) Res                { return goh.StringOk(`ok`) }
-func apiArticleGet(req Req, args []string) Res    { return goh.StringOk(`ok`) }
-func apiArticleUpdate(req Req, args []string) Res { return goh.StringOk(`ok`) }
-func apiArticleDelete(req Req, args []string) Res { return goh.StringOk(`ok`) }
+func pageIndex(req Req) Han                       { return goh.StringOk(`ok`) }
+func pageArticles(req Req) Han                    { return goh.StringOk(`ok`) }
+func pageArticle(req Req, args []string) Han      { return goh.StringOk(`ok`) }
+func apiArticleFeed(req Req) Han                  { return goh.StringOk(`ok`) }
+func apiArticleCreate(req Req) Han                { return goh.StringOk(`ok`) }
+func apiArticleGet(req Req, args []string) Han    { return goh.StringOk(`ok`) }
+func apiArticleUpdate(req Req, args []string) Han { return goh.StringOk(`ok`) }
+func apiArticleDelete(req Req, args []string) Han { return goh.StringOk(`ok`) }
 ```
 
 ## Caveats
@@ -119,6 +119,12 @@ func apiArticleDelete(req Req, args []string) Res { return goh.StringOk(`ok`) }
 Because `rout` uses panics for control flow, error handling may involve `defer` and `recover`. Consider using [`github.com/mitranim/try`](https://github.com/mitranim/try).
 
 ## Changelog
+
+### v0.5.0
+
+Lexicon change: "Res" → "Han" for anything that involves `http.Handler`.
+
+Add support for `*http.Response`. Expressing responses with `http.Handler` remains the preferred and recommended approach.
 
 ### v0.4.4
 

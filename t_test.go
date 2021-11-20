@@ -1,11 +1,13 @@
 package rout_test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 	ht "net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/mitranim/rout"
@@ -56,13 +58,37 @@ func TestWriteErr(t *testing.T) {
 	test(http.StatusNotFound, fmt.Errorf(`wrapped: %w`, rout.NotFound(``, ``)))
 }
 
+func TestRespond(t *testing.T) {
+	rout.Respond(nil, nil)
+	rout.Respond(nil, new(http.Response))
+
+	rew := ht.NewRecorder()
+	rew.Header().Set(`One`, `two`)
+
+	rout.Respond(rew, &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Header:     http.Header{`Three`: {`four`}},
+		Body:       io.NopCloser(strings.NewReader(`hello world`)),
+	})
+	res := rew.Result()
+
+	eq(t, http.StatusBadRequest, res.StatusCode)
+	eq(t, http.Header{`One`: {`two`}, `Three`: {`four`}}, res.Header)
+	eq(t, io.NopCloser(bytes.NewReader([]byte(`hello world`))), res.Body)
+}
+
+func testRes(t testing.TB, exp Res, rew *ht.ResponseRecorder) {
+	t.Helper()
+	eq(t, exp, rew.Result())
+}
+
 func eq(t testing.TB, exp, act interface{}) {
 	if !reflect.DeepEqual(exp, act) {
 		panic(fmt.Errorf("expected:\n%#v\ngot:\n%#v\n", exp, act))
 	}
 }
 
-func counter(n int) []struct{} { return make([]struct{}, n) }
+func iter(n int) []struct{} { return make([]struct{}, n) }
 
 func try(err error) {
 	if err != nil {

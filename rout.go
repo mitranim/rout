@@ -18,32 +18,85 @@ type (
 	// Shortcut for brevity.
 	R = Router
 
-	// Non-parametrized handler func. Same as `http.HandlerFunc`. The type of
-	// functions passed to `Router.Func`.
+	// Non-parametrized handler func. Same as `http.HandlerFunc`.
+	// Type of functions passed to `Router.Func`.
 	Func = http.HandlerFunc
 
-	// Parametrized handler func. The type of functions passed to
-	// `Router.ParamFunc`. Takes additional args, produced by parenthesized
-	// regexp capture groups. Args start at index 0, not 1 like in a regexp
-	// match.
+	// Parametrized handler func. Type of functions passed to `Router.ParamFunc`.
+	// Takes additional args, produced by parenthesized regexp capture groups.
+	// Args start at index 0, not 1 like in a regexp match.
 	ParamFunc = func(http.ResponseWriter, *http.Request, []string)
 
-	// Short for "responder". The type of functions passed to `Router.Res`.
-	Res func(*http.Request) http.Handler
+	// Short for "handler" or "handlerer".
+	// Type of functions passed to `Router.Han`.
+	// The returned `http.Handler` is used to write the response.
+	// To represent responses with handlers, use "github.com/mitranim/goh".
+	Han func(*http.Request) http.Handler
 
-	// Short for "parametrized responder". The type of functions passed to
-	// `Router.ParamRes`.
-	ParamRes = func(*http.Request, []string) http.Handler
+	// Short for "parametrized handler/handlerer".
+	// Type of functions passed to `Router.ParamHan`.
+	ParamHan = func(*http.Request, []string) http.Handler
+
+	// Short for "responder". Type of functions passed to `Router.Res`.
+	// The returned `*http.Response` is sent back via the function `Respond`.
+	Res func(*http.Request) *http.Response
+
+	// Short for "parametrized responder".
+	// Type of functions passed to `Router.ParamRes`.
+	ParamRes = func(*http.Request, []string) *http.Response
 )
+
+// Implement `http.Handler`.
+func (self Han) ServeHTTP(rew http.ResponseWriter, req *http.Request) {
+	if self != nil {
+		han := self(req)
+		if han != nil {
+			han.ServeHTTP(rew, req)
+		}
+	}
+}
 
 // Implement `http.Handler`.
 func (self Res) ServeHTTP(rew http.ResponseWriter, req *http.Request) {
 	if self != nil {
-		handler := self(req)
-		if handler != nil {
-			handler.ServeHTTP(rew, req)
+		res := self(req)
+		if res != nil {
+			Respond(rew, res)
 		}
 	}
+}
+
+/*
+Writes the given response. This is used internally by `Router.Res` and
+`Router.ParamRes`. If either the response writer or the response is nil, this
+is a nop. Uses `res.Header`, `res.StatusCode`, and `res.Body`, ignoring all
+other fields of the response. The returned error, if any, always comes from
+copying the body via `io.Copy`. It may be safe to ignore this error; it should
+occur mostly due to client disconnect.
+*/
+func Respond(rew http.ResponseWriter, res *http.Response) error {
+	if rew == nil || res == nil {
+		return nil
+	}
+
+	head := rew.Header()
+	for key, vals := range res.Header {
+		head[key] = vals
+	}
+
+	status := res.StatusCode
+	if status != 0 && status != http.StatusOK {
+		rew.WriteHeader(status)
+	}
+
+	body := res.Body
+	if body == nil {
+		return nil
+	}
+	defer body.Close()
+
+	_, err := io.Copy(rew, body)
+	return err
 }
 
 /*
@@ -56,10 +109,9 @@ func MakeRouter(rew http.ResponseWriter, req *http.Request) Router {
 }
 
 /*
-Shortcut for top-level error handling.
-
-If the error is nil, do nothing. If the error is non-nil, write its message as
-plain text. HTTP status code is obtained via `rout.ErrStatus`.
+Shortcut for top-level error handling. If the error is nil, do nothing. If the
+error is non-nil, write its message as plain text. HTTP status code is obtained
+via `rout.ErrStatus`.
 
 Example:
 
@@ -295,7 +347,7 @@ func (self Router) Func(fun Func) {
 	if !self.test() {
 		return
 	}
-	// Inline to simplify stacktraces.
+	// Inline for shorter stacktraces.
 	if fun != nil {
 		fun(self.Rew, self.Req)
 	}
@@ -324,21 +376,19 @@ If the router matches the request, respond by using the first non-nil handler
 returned by one of the provided funcs. If the router doesn't match the request,
 do nothing.
 */
-func (self Router) Res(funs ...Res) {
+func (self Router) Han(funs ...Han) {
 	if !self.test() {
 		return
 	}
 
-	// Inline to simplify stacktraces.
+	// Inline for shorter stacktraces.
 	for _, fun := range funs {
-		if fun == nil {
-			continue
-		}
-
-		val := fun(self.Req)
-		if val != nil {
-			val.ServeHTTP(self.Rew, self.Req)
-			panic(nil)
+		if fun != nil {
+			val := fun(self.Req)
+			if val != nil {
+				val.ServeHTTP(self.Rew, self.Req)
+				panic(nil)
+			}
 		}
 	}
 
@@ -351,24 +401,63 @@ returned by one of the provided funcs. If the router doesn't match the request,
 do nothing. The additional `[]string` argument contains regexp captures from
 the pattern passed to `Router.Regex`, if any.
 */
-func (self Router) ParamRes(funs ...ParamRes) {
+func (self Router) ParamHan(funs ...ParamHan) {
 	match := self.match()
 	if match == nil {
 		return
 	}
 
+	// Inline for shorter stacktraces.
 	for _, fun := range funs {
-		if fun == nil {
-			continue
-		}
-
-		val := fun(self.Req, match)
-		if val != nil {
-			val.ServeHTTP(self.Rew, self.Req)
-			panic(nil)
+		if fun != nil {
+			val := fun(self.Req, match)
+			if val != nil {
+				val.ServeHTTP(self.Rew, self.Req)
+				panic(nil)
+			}
 		}
 	}
 
+	panic(nil)
+}
+
+/*
+If the router matches the request, use `Respond` to write the first non-nil
+response returned by one of the provided funcs. If the router doesn't match the
+request, do nothing.
+*/
+func (self Router) Res(funs ...Res) {
+	if !self.test() {
+		return
+	}
+
+	// Inline for shorter stacktraces.
+	for _, fun := range funs {
+		if fun != nil {
+			res := fun(self.Req)
+			if res != nil {
+				panic(Respond(self.Rew, res))
+			}
+		}
+	}
+
+	panic(nil)
+}
+
+/*
+If the router matches the request, use the provided responder func to generate a
+response, and use `Respond` to write it. If the router doesn't match the
+request, do nothing. The func may be nil. The additional `[]string` argument
+contains regexp captures from the pattern passed to `Router.Regex`, if any.
+*/
+func (self Router) ParamRes(fun ParamRes) {
+	match := self.match()
+	if match == nil {
+		return
+	}
+	if fun != nil {
+		panic(Respond(self.Rew, fun(self.Req, match)))
+	}
 	panic(nil)
 }
 
@@ -479,22 +568,22 @@ func (self Router) matchPattern() []string {
 }
 
 /*
-HTTP handler type that behaves similarly to `Router.Res` or `Router.ParamRes`.
-Stores multiple `Res` functions, and when serving HTTP, uses the first non-nil
+HTTP handler type that behaves similarly to `Router.Han` or `Router.ParamHan`.
+Stores multiple `Han` functions, and when serving HTTP, uses the first non-nil
 `http.Handler` returned by one of those functions.
 */
-type Coalesce []Res
+type Coalesce []Han
 
 // Implement `http.Handler`.
 func (self Coalesce) ServeHTTP(rew http.ResponseWriter, req *http.Request) {
-	val := self.Res(req)
+	val := self.Han(req)
 	if val != nil {
 		val.ServeHTTP(rew, req)
 	}
 }
 
 // Invokes the funcs in order, returning the first resulting non-nil handler.
-func (self Coalesce) Res(req *http.Request) http.Handler {
+func (self Coalesce) Han(req *http.Request) http.Handler {
 	for _, fun := range self {
 		if fun != nil {
 			val := fun(req)

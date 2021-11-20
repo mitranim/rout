@@ -21,7 +21,7 @@ func BenchmarkRoute(b *testing.B) {
 
 	b.ResetTimer()
 
-	for range counter(b.N) {
+	for range iter(b.N) {
 		serve(rew, req)
 	}
 }
@@ -59,26 +59,26 @@ func benchRoutesApi(r rout.R) {
 	r.Begin(`/api/c2bce`).Sub(unreachableRoute)
 	r.Begin(`/api/24bef`).Sub(unreachableRoute)
 	r.Begin(`/api/091ee`).Sub(unreachableRoute)
-	r.Begin(`/api/782d4`).Res(unreachableRes)
-	r.Begin(`/api/eeabb`).Res(unreachableRes)
-	r.Begin(`/api/5ffc7`).Res(unreachableRes)
-	r.Begin(`/api/0f265`).Res(unreachableRes)
-	r.Begin(`/api/2c970`).Res(unreachableRes)
-	r.Begin(`/api/ac36c`).Res(unreachableRes)
-	r.Begin(`/api/8b8d8`).Res(unreachableRes)
-	r.Begin(`/api/3faf4`).Res(unreachableRes)
-	r.Begin(`/api/65ddd`).Res(unreachableRes)
-	r.Begin(`/api/34f35`).Res(unreachableRes)
-	r.Begin(`/api/f74f2`).Res(unreachableRes)
-	r.Begin(`/api/8031d`).Res(unreachableRes)
-	r.Begin(`/api/9bfb8`).Res(unreachableRes)
-	r.Begin(`/api/cf538`).Res(unreachableRes)
-	r.Begin(`/api/becce`).Res(unreachableRes)
-	r.Begin(`/api/183f4`).Res(unreachableRes)
-	r.Begin(`/api/3cafa`).Res(unreachableRes)
-	r.Begin(`/api/05453`).Res(unreachableRes)
-	r.Begin(`/api/f25c7`).Res(unreachableRes)
-	r.Begin(`/api/2e1f1`).Res(unreachableRes)
+	r.Begin(`/api/782d4`).Han(unreachableRes)
+	r.Begin(`/api/eeabb`).Han(unreachableRes)
+	r.Begin(`/api/5ffc7`).Han(unreachableRes)
+	r.Begin(`/api/0f265`).Han(unreachableRes)
+	r.Begin(`/api/2c970`).Han(unreachableRes)
+	r.Begin(`/api/ac36c`).Han(unreachableRes)
+	r.Begin(`/api/8b8d8`).Han(unreachableRes)
+	r.Begin(`/api/3faf4`).Han(unreachableRes)
+	r.Begin(`/api/65ddd`).Han(unreachableRes)
+	r.Begin(`/api/34f35`).Han(unreachableRes)
+	r.Begin(`/api/f74f2`).Han(unreachableRes)
+	r.Begin(`/api/8031d`).Han(unreachableRes)
+	r.Begin(`/api/9bfb8`).Han(unreachableRes)
+	r.Begin(`/api/cf538`).Han(unreachableRes)
+	r.Begin(`/api/becce`).Han(unreachableRes)
+	r.Begin(`/api/183f4`).Han(unreachableRes)
+	r.Begin(`/api/3cafa`).Han(unreachableRes)
+	r.Begin(`/api/05453`).Han(unreachableRes)
+	r.Begin(`/api/f25c7`).Han(unreachableRes)
+	r.Begin(`/api/2e1f1`).Han(unreachableRes)
 	r.Begin(`/api/match`).Sub(reachableRoute)
 	panic("unreachable")
 }
@@ -87,10 +87,10 @@ func reachableRoute(r rout.R) {
 	r.Exact(`/api/match`).Methods(unreachableRoute)
 
 	r.Regex(`^/api/match/([^/]+)$`).Methods(func(r rout.R) {
-		r.Get().Res(unreachableRes)
-		r.Put().Res(unreachableRes)
+		r.Get().Han(unreachableRes)
+		r.Put().Han(unreachableRes)
 		r.Post().Func(reachableFunc)
-		r.Delete().Res(unreachableRes)
+		r.Delete().Han(unreachableRes)
 	})
 }
 
@@ -99,22 +99,22 @@ func reachableFunc(rew Rew, _ Req) {
 }
 
 func unreachableRoute(rout.R) { panic("unreachable") }
-func unreachableRes(Req) Res  { panic("unreachable") }
+func unreachableRes(Req) Han  { panic("unreachable") }
 
 func Benchmark_error_ErrNotFound_string(b *testing.B) {
-	for range counter(b.N) {
+	for range iter(b.N) {
 		stringNop(rout.NotFound(http.MethodPost, `/some/path`).Error())
 	}
 }
 
 func Benchmark_error_ErrNotFound_interface(b *testing.B) {
-	for range counter(b.N) {
+	for range iter(b.N) {
 		errorNop(rout.NotFound(http.MethodPost, `/some/path`))
 	}
 }
 
 func Benchmark_error_fmt_Errorf(b *testing.B) {
-	for range counter(b.N) {
+	for range iter(b.N) {
 		errorNop(fmt.Errorf(
 			`[rout] routing error (HTTP status 404): no such endpoint: %q %q`,
 			http.MethodPost, `/some/path`,
@@ -123,7 +123,7 @@ func Benchmark_error_fmt_Errorf(b *testing.B) {
 }
 
 func Benchmark_error_fmt_Sprintf(b *testing.B) {
-	for range counter(b.N) {
+	for range iter(b.N) {
 		stringNop(fmt.Sprintf(
 			`[rout] routing error (HTTP status 404): no such endpoint: %q %q`,
 			http.MethodPost, `/some/path`,
@@ -132,7 +132,7 @@ func Benchmark_error_fmt_Sprintf(b *testing.B) {
 }
 
 func Benchmark_error_fmt_Sprintf_ErrNotFound(b *testing.B) {
-	for range counter(b.N) {
+	for range iter(b.N) {
 		errorNop(rout.ErrNotFound(fmt.Sprintf(
 			`[rout] routing error (HTTP status 404): no such endpoint: %q %q`,
 			http.MethodPost, `/some/path`,
@@ -141,7 +141,7 @@ func Benchmark_error_fmt_Sprintf_ErrNotFound(b *testing.B) {
 }
 
 func Benchmark_bound_methods(b *testing.B) {
-	for range counter(b.N) {
+	for range iter(b.N) {
 		benchBoundMethod()
 	}
 }
@@ -161,10 +161,10 @@ type State struct{ _ map[string]string }
 
 func (self *State) Route(r rout.R) {
 	r.Exact(`/get`).Get().Func(self.Get)
-	r.Exact(`/post`).Post().Res(self.Post)
-	r.Exact(`/patch`).Patch().Res(self.Patch)
+	r.Exact(`/post`).Post().Han(self.Post)
+	r.Exact(`/patch`).Patch().Han(self.Patch)
 }
 
-func (self *State) Get(http.ResponseWriter, *http.Request) { panic(`unreachable`) }
-func (self *State) Post(*http.Request) http.Handler        { panic(`unreachable`) }
-func (self *State) Patch(*http.Request) http.Handler       { return nil }
+func (self *State) Get(Rew, Req)  { panic(`unreachable`) }
+func (self *State) Post(Req) Han  { panic(`unreachable`) }
+func (self *State) Patch(Req) Han { return nil }
