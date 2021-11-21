@@ -27,16 +27,16 @@ func (ErrNotFound) HttpStatusCode() int { return http.StatusNotFound }
 func (self ErrNotFound) Error() string { return string(self) }
 
 // Generates an appropriate `ErrMethodNotAllowed`. Used internally.
-func MethodNotAllowed(method, path string) ErrMethodNotAllowed {
+func MethodNotAllowed(meth, path string) ErrMethodNotAllowed {
 	return ErrMethodNotAllowed(Err(
-		`method not allowed`, ErrMethodNotAllowed(``).HttpStatusCode(), method, path,
+		`method not allowed`, ErrMethodNotAllowed(``).HttpStatusCode(), meth, path,
 	))
 }
 
 // Generates an appropriate `ErrNotFound`. Used internally.
-func NotFound(method, path string) ErrNotFound {
+func NotFound(meth, path string) ErrNotFound {
 	return ErrNotFound(Err(
-		`no such endpoint`, ErrNotFound(``).HttpStatusCode(), method, path,
+		`no such endpoint`, ErrNotFound(``).HttpStatusCode(), meth, path,
 	))
 }
 
@@ -44,7 +44,7 @@ func NotFound(method, path string) ErrNotFound {
 Generates a routing error message including the given status, method and path.
 More efficient than equivalent `fmt.Sprintf` or `fmt.Errorf`.
 */
-func Err(msg string, status int, method, path string) string {
+func Err(msg string, status int, meth, path string) string {
 	const (
 		preface      = `[rout] routing error`
 		statusPrefix = ` (HTTP status `
@@ -65,7 +65,7 @@ func Err(msg string, status int, method, path string) string {
 			len(msg)+
 			len(colon)+
 			len(quote)+
-			len(method)+
+			len(meth)+
 			len(quoteInfix)+
 			len(path)+
 			len(quote),
@@ -81,7 +81,7 @@ func Err(msg string, status int, method, path string) string {
 	buf = append(buf, msg...)
 	buf = append(buf, colon...)
 	buf = append(buf, quote...)
-	buf = append(buf, method...)
+	buf = append(buf, meth...)
 	buf = append(buf, quoteInfix...)
 	buf = append(buf, path...)
 	buf = append(buf, quote...)

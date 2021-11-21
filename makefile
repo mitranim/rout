@@ -1,8 +1,9 @@
 MAKEFLAGS  := --silent --always-make
 PAR        := $(MAKE) -j 128
 VERB       := $(if $(filter $(verb), true), -v,)
+FAIL       := $(if $(filter $(fail), false),, -failfast)
 SHORT      := $(if $(filter $(short), true), -short,)
-TEST_FLAGS := -count=1 $(VERB) $(SHORT)
+TEST_FLAGS := -count=1 $(VERB) $(FAIL) $(SHORT)
 TEST       := test $(TEST_FLAGS) -timeout=1s -run=$(run)
 BENCH      := test $(TEST_FLAGS) -run=- -bench=$(or $(run),.) -benchmem
 WATCH      := watchexec -r -c -d=0 -n

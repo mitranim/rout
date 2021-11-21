@@ -2,13 +2,13 @@
 
 Experimental router for Go HTTP servers. Imperative control flow with declarative syntax. Doesn't need middleware.
 
-Very simple, small (≈300 LoC not counting docs), dependency-free, reasonably fast.
+Very simple, small, dependency-free, reasonably fast.
 
 Recommended in conjunction with [`github.com/mitranim/goh`](https://github.com/mitranim/goh), which implements various "response" types that satisfy `http.Handler`.
 
 API docs: https://pkg.go.dev/github.com/mitranim/rout.
 
-Performance: routing through a moderately-sized routing table of a production application can take a few microseconds, with no forced allocations on success.
+Performance: a moderately-sized routing table of a production app can take a few microseconds. The only forced allocation on success is `[]string` for captured args, if any.
 
 Examples: see below.
 
@@ -21,17 +21,14 @@ Examples: see below.
 ## Why
 
 * You want a router because "manual" routing requires too much code.
-* Most routing libraries are fatally flawed:
-  * They sacrifice imperative control flow, then invent "middleware" to work around the resulting problems. Imperative flow is precious. Treasure it. Don't let it go.
-  * They invent a custom pattern dialect, with its own limitations and gotchas, instead of simply using regexps.
-  * They tend to encourage incorrect semantics, such as 404 instead of 405.
+* Most routing libraries are fatally flawed. They sacrifice imperative control flow, then invent "middleware" to work around the resulting problems. Imperative flow is precious. Treasure it. Don't let it go.
 
 `rout` is an evolution of "manual" routing that avoids common router flaws:
 
 * Control flow is still imperative. It _doesn't need middleware_: simply call A before/after B.
-* Uses regexps. Compared to custom pattern dialects, this is less surprising and more flexible. Regexps are compiled only once and cached.
-* Routing uses full URL paths: `^/a/b/c$` instead of `"/a" "/b" "/c"`. This makes the code _searchable_, reducing the need for external docs.
+* No "mounting". Routing always uses full URL paths: `/a/b/c` instead of `"/a" "/b" "/c"`. This makes the code _searchable_.
 * Correct "not found" and "method not allowed" semantics out of the box.
+* Supports multiple ways of pattern matching: exact, prefix, OAS-style pattern, and regexp. Patterns are compiled once and cached.
 
 The resulting code is very dense, simple, and clear.
 
@@ -51,51 +48,44 @@ type (
   Han = http.Handler
 )
 
-var fileServer = http.FileServer(http.Dir(`public`))
+// Top-level handler, oversimplified. See docs on `Rou`.
+var handler http.Handler = rout.RouFunc(routes)
 
-// Top-level handler, simplified. Uses `rout.WriteErr` for error writing.
-func handleRequestSimple(rew Rew, req Req) {
-  rout.MakeRouter(rew, req).Serve(routes)
-}
+/*
+This is executed for every request.
 
-// Top-level handler with arbitrary error handling.
-func handleRequestAdvanced(rew Rew, req Req) {
-  // Errors are handled ONLY in app code. There are no surprises.
-  err := rout.MakeRouter(rew, req).Route(routes)
-
-  // Replace this with custom error handling.
-  rout.WriteErr(rew, err)
-}
-
-// This is executed for every request.
-//
-// Unknown paths cause the router to return error 404. Unknown methods on known
-// paths cause the router to return error 405. The error is handled by YOUR
-// code, which is an important advantage; see the handlers above.
+Unknown paths cause the router to return error 404. Unknown methods on known
+paths cause the router to return error 405. The error is handled by YOUR code,
+which is an important advantage; see the handlers above.
+*/
 func routes(r rout.R) {
-  r.Exact(`/`).Get().Han(pageIndex)
-  r.Exact(`/articles`).Get().Han(pageArticles)
-  r.Regex(`^/articles/([^/]+)$`).Get().ParamHan(pageArticle)
-  r.Begin(`/api`).Sub(routesApi)
+  r.Pat(`/`).Get().Han(pageIndex)
+  r.Pat(`/articles`).Get().Han(pageArticles)
+  r.Pat(`/articles/{}`).Get().ParamHan(pageArticle)
+  r.Sta(`/api`).Sub(routesApi)
   r.Get().Handler(fileServer)
 }
 
+var fileServer = http.FileServer(http.Dir(`public`))
+
 // This is executed for every request that gets routed to it.
 func routesApi(r rout.R) {
-  // Enable CORS only for this route. This would usually involve middleware.
-  // With `rout`, you just call A before B.
+  /**
+  Enable CORS only for this route. This would usually involve middleware.
+  With `rout`, you just call A before B.
+  */
   allowCors(r.Rew.Header())
 
-  r.Begin(`/api/articles`).Sub(routesApiArticles)
+  r.Sta(`/api/articles`).Sub(routesApiArticles)
 }
 
 // This is executed for every request that gets routed to it.
 func routesApiArticles(r rout.R) {
-  r.Exact(`/api/articles`).Methods(func(r rout.R) {
+  r.Pat(`/api/articles`).Methods(func(r rout.R) {
     r.Get().Han(apiArticleFeed)
     r.Post().Han(apiArticleCreate)
   })
-  r.Regex(`^/api/articles/([^/]+)$`).Methods(func(r rout.R) {
+  r.Pat(`/api/articles/{}`).Methods(func(r rout.R) {
     r.Get().ParamHan(apiArticleGet)
     r.Patch().ParamHan(apiArticleUpdate)
     r.Delete().ParamHan(apiArticleDelete)
@@ -120,11 +110,31 @@ Because `rout` uses panics for control flow, error handling may involve `defer` 
 
 ## Changelog
 
+### v0.6.0
+
+* Support OAS-style patterns such as `/one/{}/two`.
+  * Add `Pat`.
+  * Add `Rou.Pat`.
+* Add tools for introspection via "dry runs":
+  * `Visit`
+  * `Visitor`
+  * `RegexpVisitor`
+  * `PatternVisitor`
+  * `Ident`
+  * `IdentType`
+  * `NopRew`
+* Various breaking renamings for brevity:
+  * `Router` → `Rou`.
+  * `Exact` → `Exa`.
+  * `Begin` → `Sta`.
+  * `Regex` → `Reg`.
+* Export lower-level pattern-matching tools via `Match`.
+
 ### v0.5.0
 
 Lexicon change: "Res" → "Han" for anything that involves `http.Handler`.
 
-Add support for `*http.Response`. Expressing responses with `http.Handler` remains the preferred and recommended approach.
+Add support for `*http.Response` via `Respond`, `Router.Res`, `Router.ParamRes`. Expressing responses with `http.Handler` remains the preferred and recommended approach.
 
 ### v0.4.4
 
