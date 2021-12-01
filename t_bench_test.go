@@ -31,6 +31,10 @@ func tRou(meth, path string) Rou {
 	return Rou{Method: meth, Pattern: path}
 }
 
+func tReqRou(meth, path string) Rou {
+	return Rou{Req: tReq(meth, path)}
+}
+
 func tReq(meth, path string) hreq {
 	return &http.Request{
 		Method: meth,

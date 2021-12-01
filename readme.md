@@ -110,6 +110,10 @@ Because `rout` uses panics for control flow, error handling may involve `defer` 
 
 ## Changelog
 
+### v0.6.1
+
+Bugfix for parametrized pattern matching in method-only routes.
+
 ### v0.6.0
 
 * Support OAS-style patterns such as `/one/{}/two`.

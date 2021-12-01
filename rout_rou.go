@@ -123,7 +123,9 @@ switch the router into "normal" mode.
 In "method only" mode (opt-in), the router tests ONLY the HTTP method. The URL
 pattern is considered an automatic match. Additionally, a mismatch doesn't
 generate an error. This is used by `Rou.Methods`, which automatically switches
-the router into "method only" mode.
+the router into "method only" mode. However, for parametrized endpoints such as
+`Rou.ParamFunc`, if the method matches, the router also matches the pattern to
+get args/captures.
 */
 func (self Rou) MethodOnly() Rou {
 	self.OnlyMethod = true
@@ -302,6 +304,7 @@ func (self Rou) ParamHan(fun ParamHan) {
 	if self.vis(fun) {
 		return
 	}
+
 	args := self.Submatch()
 	if args == nil {
 		return
@@ -448,7 +451,7 @@ func (self *Rou) matchStrict() bool {
 
 func (self Rou) submatchOnlyMethod() []string {
 	if self.matchMethod() {
-		return []string{}
+		return self.submatchPattern()
 	}
 	return nil
 }

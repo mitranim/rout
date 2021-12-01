@@ -99,6 +99,7 @@ outer:
 	if len(rem) != 0 {
 		return false
 	}
+
 	if out != nil {
 		*out = append(*out, subs.slice()...)
 	}

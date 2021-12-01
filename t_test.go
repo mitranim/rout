@@ -152,6 +152,9 @@ func TestPat_Match(t *testing.T) {
 	test(false, `/one/two`, Pat{``, `one`, ``, `two`})
 	test(true, `/one/two`, Pat{`/one/`, ``})
 	test(true, `/one/two`, Pat{`/`, ``, `/two`})
+	test(true, `/one/two_three`, Pat{`/one/two_`, ``})
+	test(true, `/one/two_three.four`, Pat{`/one/two_`, ``})
+	test(false, `/one/two_three.four`, Pat{`/one/two_`, ``, `.four`})
 }
 
 func TestPat_Submatch(t *testing.T) {
@@ -170,6 +173,9 @@ func TestPat_Submatch(t *testing.T) {
 	test([]string{`one`}, `/one/two`, Pat{`/`, ``, `/two`})
 	test([]string{`two`}, `/one/two`, Pat{`/one/`, ``})
 	test([]string(nil), `/one/two`, Pat{`/`, ``, `/`, ``, `/`})
+	test([]string{`three`}, `/one/two_three`, Pat{`/one/two_`, ``})
+	test([]string{`three.four`}, `/one/two_three.four`, Pat{`/one/two_`, ``})
+	test([]string(nil), `/one/two_three.four`, Pat{`/one/two_`, ``, `.four`})
 }
 
 func TestRou_matchMethod(t *testing.T) {
@@ -558,7 +564,7 @@ func TestRou_Match_OnlyMethod(t *testing.T) {
 	test(false, `GET`, `/one/two`, tReq(`POST`, `/one/two`))
 }
 
-func TestRou_Submatch_OnlyMethod(t *testing.T) {
+func TestRou_Submatch_OnlyMethod_Exa(t *testing.T) {
 	test := func(exp []string, meth, pat string, req hreq) {
 		t.Helper()
 		rou := Rou{Req: req, Method: meth, Pattern: pat, OnlyMethod: true}
@@ -569,21 +575,46 @@ func TestRou_Submatch_OnlyMethod(t *testing.T) {
 	test([]string{}, ``, ``, tReq(``, `/one/two`))
 	test([]string{}, ``, ``, tReq(`POST`, ``))
 	test([]string{}, ``, ``, tReq(`POST`, `/one/two`))
-	test([]string{}, ``, `/one/two`, tReq(``, ``))
 	test([]string{}, ``, `/one/two`, tReq(``, `/one/two`))
-	test([]string{}, ``, `/one/two`, tReq(`POST`, ``))
 	test([]string{}, ``, `/one/two`, tReq(`POST`, `/one/two`))
 	test([]string{}, `POST`, ``, tReq(`POST`, ``))
 	test([]string{}, `POST`, ``, tReq(`POST`, `/one/two`))
-	test([]string{}, `POST`, `/one/two`, tReq(`POST`, ``))
 	test([]string{}, `POST`, `/one/two`, tReq(`POST`, `/one/two`))
 
+	test(nil, ``, `/one/two`, tReq(``, ``))
+	test(nil, ``, `/one/two`, tReq(`POST`, ``))
+	test(nil, `POST`, `/one/two`, tReq(`POST`, ``))
 	test(nil, `POST`, ``, tReq(``, ``))
 	test(nil, `POST`, ``, tReq(`GET`, ``))
 	test(nil, `GET`, ``, tReq(`POST`, ``))
 	test(nil, `POST`, `/one/two`, tReq(``, `/one/two`))
 	test(nil, `POST`, `/one/two`, tReq(`GET`, `/one/two`))
 	test(nil, `GET`, `/one/two`, tReq(`POST`, `/one/two`))
+}
+
+func TestRou_Submatch_OnlyMethod_Pat(t *testing.T) {
+	test := func(exp []string, rou Rou) {
+		t.Helper()
+		eq(t, exp, rou.Submatch())
+	}
+
+	test([]string{}, tReqRou(``, ``).Pat(``).MethodOnly())
+	test([]string{}, tReqRou(`GET`, ``).Pat(``).MethodOnly())
+	test([]string{}, tReqRou(`GET`, ``).Pat(``).MethodOnly().Get())
+	test([]string(nil), tReqRou(``, ``).Pat(``).MethodOnly().Get())
+	test([]string(nil), tReqRou(`GET`, ``).Pat(``).MethodOnly().Post())
+
+	test([]string{}, tReqRou(``, `/one/two`).Pat(``).MethodOnly())
+	test([]string{}, tReqRou(`GET`, `/one/two`).Pat(``).MethodOnly())
+	test([]string{}, tReqRou(`GET`, `/one/two`).Pat(``).MethodOnly().Get())
+	test([]string(nil), tReqRou(``, `/one/two`).Pat(``).MethodOnly().Get())
+	test([]string(nil), tReqRou(`GET`, `/one/two`).Pat(``).MethodOnly().Post())
+
+	test([]string{`two`}, tReqRou(``, `/one/two`).Pat(`/one/{}`).MethodOnly())
+	test([]string{`two`}, tReqRou(`GET`, `/one/two`).Pat(`/one/{}`).MethodOnly())
+	test([]string{`two`}, tReqRou(`GET`, `/one/two`).Pat(`/one/{}`).MethodOnly().Get())
+	test([]string(nil), tReqRou(``, `/one/two`).Pat(`/one/{}`).MethodOnly().Get())
+	test([]string(nil), tReqRou(`GET`, `/one/two`).Pat(`/one/{}`).MethodOnly().Post())
 }
 
 // Oversimplified. Needs more tests.
