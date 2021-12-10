@@ -305,9 +305,10 @@ discards all writes.
 */
 func Visit(fun func(Rou), vis Visitor) {
 	Rou{
-		Rew: NopRew{},
-		Req: &http.Request{URL: new(url.URL)},
-		Vis: vis,
+		Rew:  NopRew{},
+		Req:  &http.Request{URL: new(url.URL)},
+		Vis:  vis,
+		Done: new(bool),
 	}.Sub(fun)
 }
 

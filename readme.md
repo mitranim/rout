@@ -8,7 +8,7 @@ Recommended in conjunction with [`github.com/mitranim/goh`](https://github.com/m
 
 API docs: https://pkg.go.dev/github.com/mitranim/rout.
 
-Performance: a moderately-sized routing table of a production app can take a few microseconds. The only forced allocation on success is `[]string` for captured args, if any.
+Performance: a moderately-sized routing table of a production app can take a few microseconds, with very minimal allocations.
 
 Examples: see below.
 
@@ -104,11 +104,13 @@ func apiArticleUpdate(req Req, args []string) Han { return goh.StringOk(`ok`) }
 func apiArticleDelete(req Req, args []string) Han { return goh.StringOk(`ok`) }
 ```
 
-## Caveats
-
-Because `rout` uses panics for control flow, error handling may involve `defer` and `recover`. Consider using [`github.com/mitranim/try`](https://github.com/mitranim/try).
-
 ## Changelog
+
+### v0.6.2
+
+On successful match, `Rou` no longer uses panics to break the flow. Instead it continues execution, but flips a hidden flag that causes it to ignore all further routes. This avoids some weird gotchas related to nil panics previously used by this library.
+
+Performance: this forces a single tiny allocation (`new(bool)`), but appears to marginally improve routing performance.
 
 ### v0.6.1
 

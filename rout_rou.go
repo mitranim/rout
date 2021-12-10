@@ -12,7 +12,7 @@ Makes a router for the given request-response. Usage:
 	ro.WriteErr(rew, ro.MakeRou(rew, req).Route(myRoutes))
 */
 func MakeRou(rew http.ResponseWriter, req *http.Request) Rou {
-	return Rou{Rew: rew, Req: req}
+	return Rou{Rew: rew, Req: req, Done: new(bool)}
 }
 
 /*
@@ -30,6 +30,7 @@ type Rou struct {
 	Rew http.ResponseWriter
 	Req *http.Request
 
+	Done       *bool
 	Vis        Visitor
 	Method     string
 	Pattern    string
@@ -192,13 +193,13 @@ find a match, panic with `ErrNotFound`. If the router doesn't match the
 request, do nothing.
 */
 func (self Rou) Sub(fun func(Rou)) {
-	if self.real() && !self.Match() {
+	if self.skip() || (self.real() && !self.Match()) {
 		return
 	}
 	if fun != nil {
 		fun(self)
 	}
-	if self.real() {
+	if !self.skip() && self.real() {
 		panic(NotFound(self.req()))
 	}
 }
@@ -211,13 +212,13 @@ match, this panics with `ErrMethodNotAllowed`. If the router doesn't match the
 request, do nothing.
 */
 func (self Rou) Methods(fun func(Rou)) {
-	if self.real() && !self.matchPattern() {
+	if self.skip() || (self.real() && !self.matchPattern()) {
 		return
 	}
 	if fun != nil {
 		fun(self.MethodOnly())
 	}
-	if self.real() {
+	if !self.skip() && self.real() {
 		panic(MethodNotAllowed(self.req()))
 	}
 }
@@ -228,13 +229,13 @@ router doesn't match the request, do nothing. The handler may be nil. In
 "dry run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) Handler(val http.Handler) {
-	if self.vis(val) || !self.Match() {
+	if self.skip() || self.vis(val) || !self.Match() {
 		return
 	}
+	self.done()
 	if val != nil {
 		val.ServeHTTP(self.Rew, self.Req)
 	}
-	panic(nil)
 }
 
 /*
@@ -243,13 +244,13 @@ If the router doesn't match the request, do nothing. The func may be nil. In
 "dry run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) Func(fun Func) {
-	if self.vis(fun) || !self.Match() {
+	if self.skip() || self.vis(fun) || !self.Match() {
 		return
 	}
+	self.done()
 	if fun != nil {
 		fun(self.Rew, self.Req)
 	}
-	panic(nil)
 }
 
 /*
@@ -260,17 +261,19 @@ to `Rou.Reg`, if any. In "dry run" mode via `Visit`, this invokes a visitor for
 the current endpoint.
 */
 func (self Rou) ParamFunc(fun ParamFunc) {
-	if self.vis(fun) {
+	if self.skip() || self.vis(fun) {
 		return
 	}
+
 	args := self.Submatch()
 	if args == nil {
 		return
 	}
+
+	self.done()
 	if fun != nil {
 		fun(self.Rew, self.Req, args)
 	}
-	panic(nil)
 }
 
 /*
@@ -279,9 +282,11 @@ given function. If the router doesn't match the request, do nothing. In "dry
 run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) Han(fun Han) {
-	if self.vis(fun) || !self.Match() {
+	if self.skip() || self.vis(fun) || !self.Match() {
 		return
 	}
+
+	self.done()
 
 	if fun != nil {
 		val := fun(self.Req)
@@ -289,8 +294,6 @@ func (self Rou) Han(fun Han) {
 			val.ServeHTTP(self.Rew, self.Req)
 		}
 	}
-
-	panic(nil)
 }
 
 /*
@@ -301,7 +304,7 @@ to `Rou.Reg`, if any. In "dry run" mode via `Visit`, this invokes a visitor for
 the current endpoint.
 */
 func (self Rou) ParamHan(fun ParamHan) {
-	if self.vis(fun) {
+	if self.skip() || self.vis(fun) {
 		return
 	}
 
@@ -310,14 +313,14 @@ func (self Rou) ParamHan(fun ParamHan) {
 		return
 	}
 
+	self.done()
+
 	if fun != nil {
 		val := fun(self.Req, args)
 		if val != nil {
 			val.ServeHTTP(self.Rew, self.Req)
 		}
 	}
-
-	panic(nil)
 }
 
 /*
@@ -326,13 +329,13 @@ by the given function. If the router doesn't match the request, do nothing.
 In "dry run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) Res(fun Res) {
-	if self.vis(fun) || !self.Match() {
+	if self.skip() || self.vis(fun) || !self.Match() {
 		return
 	}
+	self.done()
 	if fun != nil {
-		panic(Respond(self.Rew, fun(self.Req)))
+		try(Respond(self.Rew, fun(self.Req)))
 	}
-	panic(nil)
 }
 
 /*
@@ -343,17 +346,19 @@ contains regexp captures from the pattern passed to `Rou.Reg`, if any. In "dry
 run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) ParamRes(fun ParamRes) {
-	if self.vis(fun) {
+	if self.skip() || self.vis(fun) {
 		return
 	}
+
 	args := self.Submatch()
 	if args == nil {
 		return
 	}
+
+	self.done()
 	if fun != nil {
-		panic(Respond(self.Rew, fun(self.Req, args)))
+		try(Respond(self.Rew, fun(self.Req, args)))
 	}
-	panic(nil)
 }
 
 /*
@@ -422,6 +427,20 @@ func (self *Rou) path() string {
 		return req.URL.Path
 	}
 	return ``
+}
+
+func (self *Rou) done() {
+	if self.Done == nil {
+		panic(ErrInit)
+	}
+	*self.Done = true
+}
+
+func (self *Rou) skip() bool {
+	if self.Done == nil {
+		panic(ErrInit)
+	}
+	return *self.Done
 }
 
 func (self *Rou) real() bool { return self.Vis == nil }

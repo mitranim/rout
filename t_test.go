@@ -620,9 +620,7 @@ func TestRou_Submatch_OnlyMethod_Pat(t *testing.T) {
 // Oversimplified. Needs more tests.
 func TestRoute(t *testing.T) {
 	rew := ht.NewRecorder()
-	req := tReqSpecific()
-
-	tServe(rew, req)
+	tServe(rew, tReqSpecific())
 	eq(t, 201, rew.Code)
 }
 

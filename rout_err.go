@@ -1,8 +1,13 @@
 package rout
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+)
+
+var ErrInit = fmt.Errorf(
+	`[rout] routing error: the router wasn't properly initialized; please use "rout.MakeRou"`,
 )
 
 // Error type returned by `rout.Route` for requests with a known path and an

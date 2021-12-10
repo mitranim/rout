@@ -96,7 +96,10 @@ func benchRoutesApi(r R) {
 	r.Sta(`/api/f25c7`).Han(unreachableHan)
 	r.Sta(`/api/2e1f1`).Han(unreachableHan)
 	r.Sta(`/api/match`).Sub(reachableRoute)
-	panic(`unreachable`)
+
+	if !*r.Done {
+		panic(`unexpected non-done router state`)
+	}
 }
 
 func reachableRoute(r R) {
