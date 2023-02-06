@@ -635,6 +635,13 @@ func TestErrStatus(t *testing.T) {
 	test(http.StatusNotFound, NotFound(``, ``))
 	test(http.StatusMethodNotAllowed, MethodNotAllowed(``, ``))
 	test(http.StatusNotFound, fmt.Errorf(`wrapped: %w`, NotFound(``, ``)))
+
+	// Must avoid a runtime panic due to `==` on uncomparable error values.
+	test(http.StatusNotFound, ErrUncomparable{ErrUncomparable{ErrUncomparable{NotFound(``, ``)}}})
+
+	// Must avoid an infinite loop when an error unwraps to itself.
+	test(http.StatusInternalServerError, ErrUnwrapCyclic{NotFound(``, ``)})
+	test(http.StatusInternalServerError, ErrUnwrapCyclic{})
 }
 
 func TestWriteErr(t *testing.T) {
@@ -726,8 +733,13 @@ func TestIdent(t *testing.T) {
 	notEq(t, Ident(Zero0{}), Ident([0]byte{}))
 
 	// Non-zero-sized non-constants aren't identical even if they're equal or equivalent.
-	notEq(t, Ident([1]byte{}), Ident([1]byte{}))
 	notEq(t, Ident(func() {}), Ident(func() {}))
+
+	// These values used to be different before Go 1.18. The test is disabled
+	// because this is not consistent across Go versions, and we don't actually
+	// rely on this behavior. It's left here as a warning.
+	//
+	// notEq(t, Ident([1]byte{}), Ident([1]byte{}))
 
 	// Non-constants with size <= word don't get copied on interface conversion.
 	var char byte = 127

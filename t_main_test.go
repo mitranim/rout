@@ -123,3 +123,32 @@ type Str string
 
 func (self Str) ServeHTTP(rew hrew, _ hreq) { _, _ = io.WriteString(rew, string(self)) }
 func (self Str) Ptr() *Str                  { return &self }
+
+type ErrUncomparable []error
+
+func (self ErrUncomparable) Error() string {
+	err := self.Unwrap()
+	if err == nil {
+		return ``
+	}
+	return err.Error()
+}
+
+func (self ErrUncomparable) Unwrap() error {
+	if len(self) > 0 {
+		return self[0]
+	}
+	return nil
+}
+
+type ErrUnwrapCyclic [1]error
+
+func (self ErrUnwrapCyclic) Error() string {
+	err := self[0]
+	if err == nil {
+		return ``
+	}
+	return err.Error()
+}
+
+func (self ErrUnwrapCyclic) Unwrap() error { return self }

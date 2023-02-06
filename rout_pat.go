@@ -18,16 +18,16 @@ OpenAPI:
 	...
 	https://spec.openapis.org/oas/v3.1.0#path-templating
 
-Supports parsing, matching, and capturing. It's MUCH more efficient than
-equivalent Go regexps. Once parsed, the pattern is safe for concurrent use by
-multiple goroutines.
+Supports parsing, matching, and capturing. MUCH more efficient than equivalent
+Go regexps. Once parsed, the pattern is safe for concurrent use by multiple
+goroutines.
 
 This structure represents a pattern parsed via `(*Pat).Parse`. Empty strings
 represent capture groups, which are called "template expression" in OpenAPI.
-Non-empty string represent exact matches. Template expressions / capture groups
-can't overlap. The current implementation allows only up to 8 capture groups;
-this is easy to optimize and serves the common case well. The limitation could
-be lifted if there was any demand.
+Non-empty strings represent exact matches. Template expressions / capture
+groups can't overlap. The current implementation allows only up to 8 capture
+groups; this is easy to optimize and serves the common case well. The
+limitation could be lifted if there was any demand.
 
 Rules:
 
@@ -220,7 +220,7 @@ func (self *Pat) UnmarshalText(src []byte) error {
 
 /*
 Implement `encoding.TextMarshaler`, allowing automatic encoding to text,
-such as to JSON.
+such as for JSON.
 */
 func (self Pat) MarshalText() ([]byte, error) {
 	return self.Append(nil), nil

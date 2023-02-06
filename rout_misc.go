@@ -124,10 +124,10 @@ If the error is nil or doesn't implement this interface, status is 500.
 */
 func ErrStatus(err error) int {
 	code := errStatusDeep(err)
-	if code == 0 {
-		return http.StatusInternalServerError
+	if code != 0 {
+		return code
 	}
-	return code
+	return http.StatusInternalServerError
 }
 
 /*
@@ -416,6 +416,6 @@ type NopRew struct{}
 
 var _ = http.ResponseWriter(NopRew{})
 
-func (NopRew) Header() http.Header       { return http.Header{} }
-func (NopRew) WriteHeader(int)           {}
-func (NopRew) Write([]byte) (int, error) { return 0, nil }
+func (NopRew) Header() http.Header           { return http.Header{} }
+func (NopRew) WriteHeader(int)               {}
+func (NopRew) Write(val []byte) (int, error) { return len(val), nil }

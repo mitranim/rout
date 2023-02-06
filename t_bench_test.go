@@ -303,3 +303,11 @@ func Benchmark_Pat_Parse(b *testing.B) {
 		try(pat.Parse(`/one/two/{}/{}`))
 	}
 }
+
+func BenchmarkErrStatus(b *testing.B) {
+	err := fmt.Errorf(`wrapped: %w`, NotFound(``, ``))
+
+	for range iter(b.N) {
+		_ = ErrStatus(err)
+	}
+}

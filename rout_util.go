@@ -3,6 +3,7 @@ package rout
 import (
 	"errors"
 	"fmt"
+	r "reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -91,14 +92,21 @@ func errStatusDeep(err error) int {
 		if impl != nil {
 			return impl.HttpStatusCode()
 		}
-
-		un := errors.Unwrap(err)
-		if un == err {
-			return 0
-		}
-		err = un
+		err = errUnwrap(err)
 	}
 	return 0
+}
+
+/*
+Improved version of `errors.Unwrap` which returns nil if the error incorrectly
+unwraps to itself, to avoid an infinite loop.
+*/
+func errUnwrap(err error) error {
+	cause := errors.Unwrap(err)
+	if cause == nil || r.DeepEqual(err, cause) {
+		return nil
+	}
+	return cause
 }
 
 func intLen(val int) (count int) {

@@ -106,6 +106,10 @@ func apiArticleDelete(req Req, args []string) Han { return goh.StringOk(`ok`) }
 
 ## Changelog
 
+### v0.6.3
+
+Fix panic in `ErrStatus` when unwrapping non-comparable error values.
+
 ### v0.6.2
 
 On successful match, `Rou` no longer uses panics to break the flow. Instead it continues execution, but flips a hidden flag that causes it to ignore all further routes. This avoids some weird gotchas related to nil panics previously used by this library.

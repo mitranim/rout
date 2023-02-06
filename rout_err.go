@@ -6,6 +6,10 @@ import (
 	"strconv"
 )
 
+/*
+Returned by `rout.Route` when the router wasn't properly initialized. Using
+`rout.MakeRou` avoids this.
+*/
 var ErrInit = fmt.Errorf(
 	`[rout] routing error: the router wasn't properly initialized; please use "rout.MakeRou"`,
 )

@@ -5,7 +5,7 @@ FAIL       := $(if $(filter $(fail), false),, -failfast)
 SHORT      := $(if $(filter $(short), true), -short,)
 TEST_FLAGS := -count=1 $(VERB) $(FAIL) $(SHORT)
 TEST       := test $(TEST_FLAGS) -timeout=1s -run=$(run)
-BENCH      := test $(TEST_FLAGS) -run=- -bench=$(or $(run),.) -benchmem
+BENCH      := test $(TEST_FLAGS) -run=- -bench=$(or $(run),.) -benchmem -benchtime=128ms
 WATCH      := watchexec -r -c -d=0 -n
 
 default: test_w
