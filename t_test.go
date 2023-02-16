@@ -620,8 +620,24 @@ func TestRou_Submatch_OnlyMethod_Pat(t *testing.T) {
 // Oversimplified. Needs more tests.
 func TestRoute(t *testing.T) {
 	rew := ht.NewRecorder()
-	tServe(rew, tReqSpecific())
+	rou := MakeRou(rew, tReqSpecific())
+	try(rou.Route(benchRoutes))
+
 	eq(t, 201, rew.Code)
+
+	eq(
+		t,
+		Mut{
+			Endpoint: Endpoint{
+				Pattern: `/api/match/{}`,
+				Match:   MatchPat,
+				Method:  http.MethodPost,
+				Handler: Ident(reachableFunc),
+			},
+			Done: true,
+		},
+		*rou.Mut,
+	)
 }
 
 func TestErrStatus(t *testing.T) {
@@ -778,36 +794,36 @@ func TestRou_Vis(t *testing.T) {
 		paramRes    = func(hreq, []string) hres { panic(`unreachable`) }
 	)
 
-	route := func(r R) {
-		r.Exa(`/handlerFunc`).Get().Func(handlerFunc)
-		r.Exa(`/handler`).Get().Handler(handler)
-		r.Exa(`/han`).Get().Han(han)
-		r.Exa(`/paramHan`).Get().ParamHan(paramHan)
-		r.Exa(`/res`).Get().Res(res)
-		r.Exa(`/paramRes`).Get().ParamRes(paramRes)
+	route := func(rou Rou) {
+		rou.Exa(`/handlerFunc`).Get().Func(handlerFunc)
+		rou.Exa(`/handler`).Get().Handler(handler)
+		rou.Exa(`/han`).Get().Han(han)
+		rou.Exa(`/paramHan`).Get().ParamHan(paramHan)
+		rou.Exa(`/res`).Get().Res(res)
+		rou.Exa(`/paramRes`).Get().ParamRes(paramRes)
 
-		r.Sta(`/one`).Sub(func(r R) {
-			r.Pat(`/one/handlerFunc`).Post().Func(handlerFunc)
-			r.Pat(`/one/handler`).Post().Handler(handler)
-			r.Pat(`/one/han`).Post().Han(han)
-			r.Pat(`/one/paramHan`).Post().ParamHan(paramHan)
-			r.Pat(`/one/res`).Post().Res(res)
-			r.Pat(`/one/paramRes`).Post().ParamRes(paramRes)
+		rou.Sta(`/one`).Sub(func(rou Rou) {
+			rou.Pat(`/one/handlerFunc`).Post().Func(handlerFunc)
+			rou.Pat(`/one/handler`).Post().Handler(handler)
+			rou.Pat(`/one/han`).Post().Han(han)
+			rou.Pat(`/one/paramHan`).Post().ParamHan(paramHan)
+			rou.Pat(`/one/res`).Post().Res(res)
+			rou.Pat(`/one/paramRes`).Post().ParamRes(paramRes)
 
-			r.Reg(`^/two/([^/])$`).Methods(func(r R) {
-				r.Get().Func(handlerFunc)
-				r.Get().Handler(handler)
-				r.Get().Han(han)
-				r.Get().ParamHan(paramHan)
-				r.Get().Res(res)
-				r.Get().ParamRes(paramRes)
+			rou.Reg(`^/two/([^/])$`).Methods(func(rou Rou) {
+				rou.Get().Func(handlerFunc)
+				rou.Get().Handler(handler)
+				rou.Get().Han(han)
+				rou.Get().ParamHan(paramHan)
+				rou.Get().Res(res)
+				rou.Get().ParamRes(paramRes)
 
-				r.Patch().Func(handlerFunc)
-				r.Patch().Handler(handler)
-				r.Patch().Han(han)
-				r.Patch().ParamHan(paramHan)
-				r.Patch().Res(res)
-				r.Patch().ParamRes(paramRes)
+				rou.Patch().Func(handlerFunc)
+				rou.Patch().Handler(handler)
+				rou.Patch().Han(han)
+				rou.Patch().ParamHan(paramHan)
+				rou.Patch().Res(res)
+				rou.Patch().ParamRes(paramRes)
 			})
 		})
 	}
@@ -863,11 +879,11 @@ func TestRegexpVisitor(t *testing.T) {
 
 	notEq(t, Ident(hanExa), Ident(hanSta))
 
-	route := func(r R) {
-		r.Exa(`/one/exa`).Post().Han(hanExa)
-		r.Sta(`/two/sta`).Post().Han(hanSta)
-		r.Reg(`^/three/reg/([^/]+)$`).Post().Han(hanReg)
-		r.Pat(`/four/pat/{}`).Post().Han(hanPat)
+	route := func(rou Rou) {
+		rou.Exa(`/one/exa`).Post().Han(hanExa)
+		rou.Sta(`/two/sta`).Post().Han(hanSta)
+		rou.Reg(`^/three/reg/([^/]+)$`).Post().Han(hanReg)
+		rou.Pat(`/four/pat/{}`).Post().Han(hanPat)
 	}
 
 	var endpoints []Endpoint
@@ -897,9 +913,9 @@ func TestPatternVisitor(t *testing.T) {
 	notEq(t, Ident(hanExa), Ident(hanPat))
 
 	// This adapter supports only "exact" and "pattern" matches.
-	route := func(r R) {
-		r.Exa(`/one/exa`).Post().Han(hanExa)
-		r.Pat(`/four/pat/{}`).Post().Han(hanPat)
+	route := func(rou Rou) {
+		rou.Exa(`/one/exa`).Post().Han(hanExa)
+		rou.Pat(`/four/pat/{}`).Post().Han(hanPat)
 	}
 
 	var endpoints []Endpoint
@@ -919,8 +935,8 @@ func TestPatternVisitor(t *testing.T) {
 		endpoints,
 	)
 
-	routeReg := func(r R) {
-		r.Reg(`^/three/reg/([^/]+)$`).Post().Han(nil)
+	routeReg := func(rou Rou) {
+		rou.Reg(`^/three/reg/([^/]+)$`).Post().Han(nil)
 	}
 
 	panics(
@@ -929,8 +945,8 @@ func TestPatternVisitor(t *testing.T) {
 		func() { Visit(routeReg, vis) },
 	)
 
-	routeSta := func(r R) {
-		r.Sta(`/two/sta`).Post().Han(nil)
+	routeSta := func(rou Rou) {
+		rou.Sta(`/two/sta`).Post().Han(nil)
 	}
 
 	panics(

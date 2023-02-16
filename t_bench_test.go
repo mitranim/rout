@@ -50,66 +50,66 @@ func tServe(rew hrew, req hreq) {
 	try(MakeRou(rew, req).Route(benchRoutes))
 }
 
-func benchRoutes(r R) {
-	r.Sta(`/api`).Sub(benchRoutesApi)
+func benchRoutes(rou Rou) {
+	rou.Sta(`/api`).Sub(benchRoutesApi)
 }
 
-func benchRoutesApi(r R) {
-	r.Sta(`/api/9bbb5`).Sub(unreachableRoute)
-	r.Sta(`/api/3b002`).Sub(unreachableRoute)
-	r.Sta(`/api/ac134`).Sub(unreachableRoute)
-	r.Sta(`/api/e7c64`).Sub(unreachableRoute)
-	r.Sta(`/api/424da`).Sub(unreachableRoute)
-	r.Sta(`/api/4cddb`).Sub(unreachableRoute)
-	r.Sta(`/api/fabe0`).Sub(unreachableRoute)
-	r.Sta(`/api/210c4`).Sub(unreachableRoute)
-	r.Sta(`/api/c4abd`).Sub(unreachableRoute)
-	r.Sta(`/api/82863`).Sub(unreachableRoute)
-	r.Sta(`/api/9ef98`).Sub(unreachableRoute)
-	r.Sta(`/api/f565f`).Sub(unreachableRoute)
-	r.Sta(`/api/f82b7`).Sub(unreachableRoute)
-	r.Sta(`/api/d7403`).Sub(unreachableRoute)
-	r.Sta(`/api/21838`).Sub(unreachableRoute)
-	r.Sta(`/api/1acff`).Sub(unreachableRoute)
-	r.Sta(`/api/a0771`).Sub(unreachableRoute)
-	r.Sta(`/api/c2bce`).Sub(unreachableRoute)
-	r.Sta(`/api/24bef`).Sub(unreachableRoute)
-	r.Sta(`/api/091ee`).Sub(unreachableRoute)
-	r.Sta(`/api/782d4`).Han(unreachableHan)
-	r.Sta(`/api/eeabb`).Han(unreachableHan)
-	r.Sta(`/api/5ffc7`).Han(unreachableHan)
-	r.Sta(`/api/0f265`).Han(unreachableHan)
-	r.Sta(`/api/2c970`).Han(unreachableHan)
-	r.Sta(`/api/ac36c`).Han(unreachableHan)
-	r.Sta(`/api/8b8d8`).Han(unreachableHan)
-	r.Sta(`/api/3faf4`).Han(unreachableHan)
-	r.Sta(`/api/65ddd`).Han(unreachableHan)
-	r.Sta(`/api/34f35`).Han(unreachableHan)
-	r.Sta(`/api/f74f2`).Han(unreachableHan)
-	r.Sta(`/api/8031d`).Han(unreachableHan)
-	r.Sta(`/api/9bfb8`).Han(unreachableHan)
-	r.Sta(`/api/cf538`).Han(unreachableHan)
-	r.Sta(`/api/becce`).Han(unreachableHan)
-	r.Sta(`/api/183f4`).Han(unreachableHan)
-	r.Sta(`/api/3cafa`).Han(unreachableHan)
-	r.Sta(`/api/05453`).Han(unreachableHan)
-	r.Sta(`/api/f25c7`).Han(unreachableHan)
-	r.Sta(`/api/2e1f1`).Han(unreachableHan)
-	r.Sta(`/api/match`).Sub(reachableRoute)
+func benchRoutesApi(rou Rou) {
+	rou.Sta(`/api/9bbb5`).Sub(unreachableRoute)
+	rou.Sta(`/api/3b002`).Sub(unreachableRoute)
+	rou.Sta(`/api/ac134`).Sub(unreachableRoute)
+	rou.Sta(`/api/e7c64`).Sub(unreachableRoute)
+	rou.Sta(`/api/424da`).Sub(unreachableRoute)
+	rou.Sta(`/api/4cddb`).Sub(unreachableRoute)
+	rou.Sta(`/api/fabe0`).Sub(unreachableRoute)
+	rou.Sta(`/api/210c4`).Sub(unreachableRoute)
+	rou.Sta(`/api/c4abd`).Sub(unreachableRoute)
+	rou.Sta(`/api/82863`).Sub(unreachableRoute)
+	rou.Sta(`/api/9ef98`).Sub(unreachableRoute)
+	rou.Sta(`/api/f565f`).Sub(unreachableRoute)
+	rou.Sta(`/api/f82b7`).Sub(unreachableRoute)
+	rou.Sta(`/api/d7403`).Sub(unreachableRoute)
+	rou.Sta(`/api/21838`).Sub(unreachableRoute)
+	rou.Sta(`/api/1acff`).Sub(unreachableRoute)
+	rou.Sta(`/api/a0771`).Sub(unreachableRoute)
+	rou.Sta(`/api/c2bce`).Sub(unreachableRoute)
+	rou.Sta(`/api/24bef`).Sub(unreachableRoute)
+	rou.Sta(`/api/091ee`).Sub(unreachableRoute)
+	rou.Sta(`/api/782d4`).Han(unreachableHan)
+	rou.Sta(`/api/eeabb`).Han(unreachableHan)
+	rou.Sta(`/api/5ffc7`).Han(unreachableHan)
+	rou.Sta(`/api/0f265`).Han(unreachableHan)
+	rou.Sta(`/api/2c970`).Han(unreachableHan)
+	rou.Sta(`/api/ac36c`).Han(unreachableHan)
+	rou.Sta(`/api/8b8d8`).Han(unreachableHan)
+	rou.Sta(`/api/3faf4`).Han(unreachableHan)
+	rou.Sta(`/api/65ddd`).Han(unreachableHan)
+	rou.Sta(`/api/34f35`).Han(unreachableHan)
+	rou.Sta(`/api/f74f2`).Han(unreachableHan)
+	rou.Sta(`/api/8031d`).Han(unreachableHan)
+	rou.Sta(`/api/9bfb8`).Han(unreachableHan)
+	rou.Sta(`/api/cf538`).Han(unreachableHan)
+	rou.Sta(`/api/becce`).Han(unreachableHan)
+	rou.Sta(`/api/183f4`).Han(unreachableHan)
+	rou.Sta(`/api/3cafa`).Han(unreachableHan)
+	rou.Sta(`/api/05453`).Han(unreachableHan)
+	rou.Sta(`/api/f25c7`).Han(unreachableHan)
+	rou.Sta(`/api/2e1f1`).Han(unreachableHan)
+	rou.Sta(`/api/match`).Sub(reachableRoute)
 
-	if !*r.Done {
+	if !rou.Mut.Done {
 		panic(`unexpected non-done router state`)
 	}
 }
 
-func reachableRoute(r R) {
-	r.Exa(`/api/match`).Methods(unreachableRoute)
+func reachableRoute(rou Rou) {
+	rou.Exa(`/api/match`).Methods(unreachableRoute)
 
-	r.Pat(`/api/match/{}`).Methods(func(r R) {
-		r.Get().Han(unreachableHan)
-		r.Put().Han(unreachableHan)
-		r.Post().Func(reachableFunc)
-		r.Delete().Han(unreachableHan)
+	rou.Pat(`/api/match/{}`).Methods(func(rou Rou) {
+		rou.Get().Han(unreachableHan)
+		rou.Put().Han(unreachableHan)
+		rou.Post().Func(reachableFunc)
+		rou.Delete().Han(unreachableHan)
 	})
 }
 
@@ -117,7 +117,7 @@ func reachableFunc(rew hrew, _ hreq) {
 	rew.WriteHeader(201)
 }
 
-func unreachableRoute(R)       { panic(`unreachable`) }
+func unreachableRoute(Rou)     { panic(`unreachable`) }
 func unreachableHan(hreq) hhan { panic(`unreachable`) }
 
 func Benchmark_error_ErrNotFound_string(b *testing.B) {
@@ -173,10 +173,10 @@ var staticState State
 
 type State struct{ _ map[string]string }
 
-func (self *State) Route(r R) {
-	r.Exa(`/get`).Get().Func(self.Get)
-	r.Exa(`/post`).Post().Han(self.Post)
-	r.Exa(`/patch`).Patch().Han(self.Patch)
+func (self *State) Route(rou Rou) {
+	rou.Exa(`/get`).Get().Func(self.Get)
+	rou.Exa(`/post`).Post().Han(self.Post)
+	rou.Exa(`/patch`).Patch().Han(self.Patch)
 }
 
 func (self *State) Get(hrew, hreq)  { panic(`unreachable`) }

@@ -79,19 +79,19 @@ outer:
 			continue
 		}
 
-		var i int = -1
+		var ind int = -1
 		var char rune
 
-		for i, char = range rem {
+		for ind, char = range rem {
 			if char == '/' || char == '?' || char == '#' {
-				if !subs.add(strPop(&rem, i)) {
+				if !subs.add(strPop(&rem, ind)) {
 					return false
 				}
 				continue outer
 			}
 		}
 
-		if !subs.add(strPop(&rem, i+1)) {
+		if !subs.add(strPop(&rem, ind+1)) {
 			return false
 		}
 	}
@@ -119,7 +119,7 @@ func (self *Pat) Parse(src string) error {
 	var cursor int
 	var templates int
 
-	for i, char := range src {
+	for ind, char := range src {
 		if char == '?' || char == '#' {
 			return fmt.Errorf(
 				`[rout] invalid OAS-style pattern %q: unexpected %q`,
@@ -130,7 +130,7 @@ func (self *Pat) Parse(src string) error {
 		if template {
 			if char == '}' {
 				buf = append(buf, ``)
-				cursor = i + 1
+				cursor = ind + 1
 				template = false
 				templates++
 
@@ -154,11 +154,11 @@ func (self *Pat) Parse(src string) error {
 		}
 
 		if char == '{' {
-			prev := src[cursor:i]
+			prev := src[cursor:ind]
 			if prev != `` {
 				buf = append(buf, prev)
 			}
-			cursor = i
+			cursor = ind
 			template = true
 			continue
 		}

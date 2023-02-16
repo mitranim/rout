@@ -12,14 +12,16 @@ Makes a router for the given request-response. Usage:
 	ro.WriteErr(rew, ro.MakeRou(rew, req).Route(myRoutes))
 */
 func MakeRou(rew http.ResponseWriter, req *http.Request) Rou {
-	return Rou{Rew: rew, Req: req, Done: new(bool)}
+	return Rou{Rew: rew, Req: req, Mut: new(Mut)}
 }
 
 /*
 Router type. Matches patterns and executes handlers. Should be used via
 `Rou.Serve` or `Rou.Route`, which handles panics inherent to the routing flow.
 Immutable, with a builder-style API where every method returns a modified copy.
-A router is stack-allocated; its builder API incurs no allocator/GC work.
+A router is stack-allocated; its builder API incurs no allocator/GC work. The
+only tiny exception is `Rou.Mut`, which is the only allocation per request
+forced by this package.
 
 Implementation note. All "modifying" methods are defined on the value type in
 order to return modified copies, but many non-modifying methods are defined on
@@ -27,10 +29,9 @@ the pointer type for marginal efficiency gains, due to the size of this
 struct.
 */
 type Rou struct {
-	Rew http.ResponseWriter
-	Req *http.Request
-
-	Done       *bool
+	Rew        http.ResponseWriter
+	Req        *http.Request
+	Mut        *Mut
 	Vis        Visitor
 	Method     string
 	Pattern    string
@@ -193,13 +194,13 @@ find a match, panic with `ErrNotFound`. If the router doesn't match the
 request, do nothing.
 */
 func (self Rou) Sub(fun func(Rou)) {
-	if self.skip() || (self.real() && !self.Match()) {
+	if self.isDone() || (self.isReal() && !self.Match()) {
 		return
 	}
 	if fun != nil {
 		fun(self)
 	}
-	if !self.skip() && self.real() {
+	if !self.isDone() && self.isReal() {
 		panic(NotFound(self.req()))
 	}
 }
@@ -212,13 +213,13 @@ match, this panics with `ErrMethodNotAllowed`. If the router doesn't match the
 request, do nothing.
 */
 func (self Rou) Methods(fun func(Rou)) {
-	if self.skip() || (self.real() && !self.matchPattern()) {
+	if self.isDone() || (self.isReal() && !self.matchPattern()) {
 		return
 	}
 	if fun != nil {
 		fun(self.MethodOnly())
 	}
-	if !self.skip() && self.real() {
+	if !self.isDone() && self.isReal() {
 		panic(MethodNotAllowed(self.req()))
 	}
 }
@@ -229,10 +230,10 @@ router doesn't match the request, do nothing. The handler may be nil. In
 "dry run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) Handler(val http.Handler) {
-	if self.skip() || self.vis(val) || !self.Match() {
+	if self.isDone() || self.vis(val) || !self.Match() {
 		return
 	}
-	self.done()
+	self.done(val)
 	if val != nil {
 		val.ServeHTTP(self.Rew, self.Req)
 	}
@@ -244,10 +245,10 @@ If the router doesn't match the request, do nothing. The func may be nil. In
 "dry run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) Func(fun Func) {
-	if self.skip() || self.vis(fun) || !self.Match() {
+	if self.isDone() || self.vis(fun) || !self.Match() {
 		return
 	}
-	self.done()
+	self.done(fun)
 	if fun != nil {
 		fun(self.Rew, self.Req)
 	}
@@ -261,7 +262,7 @@ to `Rou.Reg`, if any. In "dry run" mode via `Visit`, this invokes a visitor for
 the current endpoint.
 */
 func (self Rou) ParamFunc(fun ParamFunc) {
-	if self.skip() || self.vis(fun) {
+	if self.isDone() || self.vis(fun) {
 		return
 	}
 
@@ -270,7 +271,7 @@ func (self Rou) ParamFunc(fun ParamFunc) {
 		return
 	}
 
-	self.done()
+	self.done(fun)
 	if fun != nil {
 		fun(self.Rew, self.Req, args)
 	}
@@ -282,11 +283,11 @@ given function. If the router doesn't match the request, do nothing. In "dry
 run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) Han(fun Han) {
-	if self.skip() || self.vis(fun) || !self.Match() {
+	if self.isDone() || self.vis(fun) || !self.Match() {
 		return
 	}
 
-	self.done()
+	self.done(fun)
 
 	if fun != nil {
 		val := fun(self.Req)
@@ -304,7 +305,7 @@ to `Rou.Reg`, if any. In "dry run" mode via `Visit`, this invokes a visitor for
 the current endpoint.
 */
 func (self Rou) ParamHan(fun ParamHan) {
-	if self.skip() || self.vis(fun) {
+	if self.isDone() || self.vis(fun) {
 		return
 	}
 
@@ -313,7 +314,7 @@ func (self Rou) ParamHan(fun ParamHan) {
 		return
 	}
 
-	self.done()
+	self.done(fun)
 
 	if fun != nil {
 		val := fun(self.Req, args)
@@ -329,10 +330,10 @@ by the given function. If the router doesn't match the request, do nothing.
 In "dry run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) Res(fun Res) {
-	if self.skip() || self.vis(fun) || !self.Match() {
+	if self.isDone() || self.vis(fun) || !self.Match() {
 		return
 	}
-	self.done()
+	self.done(fun)
 	if fun != nil {
 		try(Respond(self.Rew, fun(self.Req)))
 	}
@@ -346,7 +347,7 @@ contains regexp captures from the pattern passed to `Rou.Reg`, if any. In "dry
 run" mode via `Visit`, this invokes a visitor for the current endpoint.
 */
 func (self Rou) ParamRes(fun ParamRes) {
-	if self.skip() || self.vis(fun) {
+	if self.isDone() || self.vis(fun) {
 		return
 	}
 
@@ -355,7 +356,7 @@ func (self Rou) ParamRes(fun ParamRes) {
 		return
 	}
 
-	self.done()
+	self.done(fun)
 	if fun != nil {
 		try(Respond(self.Rew, fun(self.Req, args)))
 	}
@@ -429,21 +430,23 @@ func (self *Rou) path() string {
 	return ``
 }
 
-func (self *Rou) done() {
-	if self.Done == nil {
+func (self *Rou) mut() *Mut {
+	out := self.Mut
+	if out == nil {
 		panic(ErrInit)
 	}
-	*self.Done = true
+	return out
 }
 
-func (self *Rou) skip() bool {
-	if self.Done == nil {
-		panic(ErrInit)
-	}
-	return *self.Done
+func (self *Rou) done(val interface{}) {
+	mut := self.mut()
+	mut.Done = true
+	mut.Endpoint = self.endpoint(val)
 }
 
-func (self *Rou) real() bool { return self.Vis == nil }
+func (self *Rou) isDone() bool { return self.mut().Done }
+
+func (self *Rou) isReal() bool { return self.Vis == nil }
 
 func (self *Rou) vis(val interface{}) bool {
 	vis := self.Vis
@@ -484,4 +487,15 @@ func (self *Rou) submatchStrict() []string {
 		return args
 	}
 	panic(MethodNotAllowed(self.req()))
+}
+
+/*
+Mutable part of `Rou`, shared between all instances of `Rou` for a given
+request-response. Other fields of `Rou` are considered immutable. See `Rou`
+and its "builder" methods. After a successful route match, `.Done` is true
+and `.Endpoint` describes the matched route.
+*/
+type Mut struct {
+	Endpoint Endpoint
+	Done     bool
 }

@@ -27,9 +27,9 @@ func (self RouFunc) ServeHTTP(rew http.ResponseWriter, req *http.Request) {
 }
 
 /*
-Type of functions passed to `Rou.Func`. Non-parametrized handler func. Same as
-`http.HandlerFunc` but an alias of an anonymous type. Doesn't implement
-`http.Handler`.
+Type of functions passed to `Rou.Func`. Non-parametrized handler func. Same
+signature as `http.HandlerFunc`, but this is an anonymous type, not a typedef.
+Doesn't implement `http.Handler`.
 */
 type Func = func(http.ResponseWriter, *http.Request)
 
@@ -304,12 +304,9 @@ visiting all routes without executing any handlers. During the dry run, the
 discards all writes.
 */
 func Visit(fun func(Rou), vis Visitor) {
-	Rou{
-		Rew:  NopRew{},
-		Req:  &http.Request{URL: new(url.URL)},
-		Vis:  vis,
-		Done: new(bool),
-	}.Sub(fun)
+	rou := MakeRou(NopRew{}, &http.Request{URL: new(url.URL)})
+	rou.Vis = vis
+	rou.Sub(fun)
 }
 
 /*

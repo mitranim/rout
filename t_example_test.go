@@ -34,37 +34,37 @@ Unknown paths cause the router to return error 404. Unknown methods on known
 paths cause the router to return error 405. The error is handled by YOUR code,
 which is an important advantage; see `handleRequest` above.
 */
-func routes(r rout.R) {
-	r.Pat(`/`).Get().Han(pageIndex)
-	r.Pat(`/articles`).Get().Han(pageArticles)
-	r.Pat(`/articles/{}`).Get().ParamHan(pageArticle)
-	r.Sta(`/api`).Sub(routesApi)
-	r.Get().Handler(fileServer)
+func routes(rou rout.Rou) {
+	rou.Pat(`/`).Get().Han(pageIndex)
+	rou.Pat(`/articles`).Get().Han(pageArticles)
+	rou.Pat(`/articles/{}`).Get().ParamHan(pageArticle)
+	rou.Sta(`/api`).Sub(routesApi)
+	rou.Get().Handler(fileServer)
 }
 
 var fileServer = http.FileServer(http.Dir(`public`))
 
 // This is executed for every request that gets routed to it.
-func routesApi(r rout.R) {
+func routesApi(rou rout.Rou) {
 	/**
 	Enable CORS only for this route. This would usually involve middleware.
 	With `rout`, you just call A before B.
 	*/
-	allowCors(r.Rew.Header())
+	allowCors(rou.Rew.Header())
 
-	r.Sta(`/api/articles`).Sub(routesApiArticles)
+	rou.Sta(`/api/articles`).Sub(routesApiArticles)
 }
 
 // This is executed for every request that gets routed to it.
-func routesApiArticles(r rout.R) {
-	r.Pat(`/api/articles`).Methods(func(r rout.R) {
-		r.Get().Han(apiArticleFeed)
-		r.Post().Han(apiArticleCreate)
+func routesApiArticles(rou rout.Rou) {
+	rou.Pat(`/api/articles`).Methods(func(rou rout.Rou) {
+		rou.Get().Han(apiArticleFeed)
+		rou.Post().Han(apiArticleCreate)
 	})
-	r.Pat(`/api/articles/{}`).Methods(func(r rout.R) {
-		r.Get().ParamHan(apiArticleGet)
-		r.Patch().ParamHan(apiArticleUpdate)
-		r.Delete().ParamHan(apiArticleDelete)
+	rou.Pat(`/api/articles/{}`).Methods(func(rou rout.Rou) {
+		rou.Get().ParamHan(apiArticleGet)
+		rou.Patch().ParamHan(apiArticleUpdate)
+		rou.Delete().ParamHan(apiArticleDelete)
 	})
 }
 
