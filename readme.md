@@ -106,6 +106,10 @@ func apiArticleDelete(req Req, args []string) Han { return goh.StringOk(`ok`) }
 
 ## Changelog
 
+### v0.7.1
+
+Renamed `Pat.Append` to `Pat.AppendTo` for consistency with other libraries.
+
 ### v0.7.0
 
 Added `Rou.Mut` for introspection. It stores the matched `Endpoint` after a successful match. Minor breaking change: `Rou.Done` is removed, as the boolean is now part of `Mut`. There is no measurable performance regression.

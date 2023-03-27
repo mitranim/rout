@@ -192,13 +192,13 @@ Implement `fmt.Stringer` for debug purposes. For patterns parsed from a string,
 the resulting representation is functionally equivalent to the original, but
 capture groups are now anonymous (their inner text is lost).
 */
-func (self Pat) String() string { return bytesString(self.Append(nil)) }
+func (self Pat) String() string { return bytesString(self.AppendTo(nil)) }
 
 /*
 Appends a text representation, same as `.String`. Sometimes allows more
 efficient encoding.
 */
-func (self Pat) Append(buf []byte) []byte {
+func (self Pat) AppendTo(buf []byte) []byte {
 	buf = growBytes(buf, self.strLen())
 	for _, val := range self {
 		if val == `` {
@@ -223,7 +223,7 @@ Implement `encoding.TextMarshaler`, allowing automatic encoding to text,
 such as for JSON.
 */
 func (self Pat) MarshalText() ([]byte, error) {
-	return self.Append(nil), nil
+	return self.AppendTo(nil), nil
 }
 
 /*
