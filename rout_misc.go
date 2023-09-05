@@ -99,7 +99,7 @@ func Respond(rew http.ResponseWriter, res *http.Response) error {
 /*
 Shortcut for top-level error handling. If the error is nil, do nothing. If the
 error is non-nil, write its message as plain text. HTTP status code is obtained
-via `rout.ErrStatus`.
+via `rout.ErrStatusFallback`.
 
 Example:
 
@@ -109,7 +109,7 @@ func WriteErr(rew http.ResponseWriter, err error) {
 	if err == nil {
 		return
 	}
-	rew.WriteHeader(ErrStatus(err))
+	rew.WriteHeader(ErrStatusFallback(err))
 	_, _ = io.WriteString(rew, err.Error())
 }
 
@@ -120,14 +120,28 @@ may be implemented by deeply-wrapped errors; this performs deep unwrapping.
 
 	interface { HttpStatusCode() int }
 
-If the error is nil or doesn't implement this interface, status is 500.
+If the error is nil or doesn't implement this interface, status is 0.
+If you always want a non-zero code, use `ErrStatusFallback` which falls
+back on 500.
 */
 func ErrStatus(err error) int {
 	code := errStatusDeep(err)
 	if code != 0 {
 		return code
 	}
-	return http.StatusInternalServerError
+	return 0
+}
+
+/*
+Convenience wrapper for `ErrStatus` that falls back on status 500 when the error
+doesn't seem to contain an HTTP status, always returning a non-zero result.
+*/
+func ErrStatusFallback(err error) int {
+	out := ErrStatus(err)
+	if out == 0 {
+		return http.StatusInternalServerError
+	}
+	return out
 }
 
 /*

@@ -646,6 +646,26 @@ func TestErrStatus(t *testing.T) {
 		eq(t, exp, ErrStatus(err))
 	}
 
+	test(0, nil)
+	test(0, io.EOF)
+	test(http.StatusNotFound, NotFound(``, ``))
+	test(http.StatusMethodNotAllowed, MethodNotAllowed(``, ``))
+	test(http.StatusNotFound, fmt.Errorf(`wrapped: %w`, NotFound(``, ``)))
+
+	// Must avoid a runtime panic due to `==` on uncomparable error values.
+	test(http.StatusNotFound, ErrUncomparable{ErrUncomparable{ErrUncomparable{NotFound(``, ``)}}})
+
+	// Must avoid an infinite loop when an error unwraps to itself.
+	test(0, ErrUnwrapCyclic{NotFound(``, ``)})
+	test(0, ErrUnwrapCyclic{})
+}
+
+func TestErrStatusFallback(t *testing.T) {
+	test := func(exp int, err error) {
+		t.Helper()
+		eq(t, exp, ErrStatusFallback(err))
+	}
+
 	test(http.StatusInternalServerError, nil)
 	test(http.StatusInternalServerError, io.EOF)
 	test(http.StatusNotFound, NotFound(``, ``))

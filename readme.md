@@ -106,6 +106,10 @@ func apiArticleDelete(req Req, args []string) Han { return goh.StringOk(`ok`) }
 
 ## Changelog
 
+### v0.8.0
+
+`ErrStatus` no longer falls back on status 500. Callers of `ErrStatus` must check if the status is 0 and implement their own fallback. Use the newly added `ErrStatusFallback` for the old behavior.
+
 ### v0.7.1
 
 Renamed `Pat.Append` to `Pat.AppendTo` for consistency with other libraries.
